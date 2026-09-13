@@ -43,7 +43,7 @@ export async function saveCustomerAddress(address: CheckoutAddress) {
 export async function createPendingOrder(
   dairywalaId: string,
   addressId: string,
-  slotCode: string,
+  slotId: string,
   items: CartItem[],
 ) {
   const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -51,10 +51,10 @@ export async function createPendingOrder(
   if (!user) throw new Error('Please sign in before placing an order.');
   if (!items.length) throw new Error('Your cart is empty.');
 
-  const { data, error } = await supabase.rpc('create_pending_order', {
+  const { data, error } = await supabase.rpc('create_customer_order', {
     p_dairywala_id: dairywalaId,
     p_address_id: addressId,
-    p_slot_code: slotCode,
+    p_delivery_slot_id: slotId,
     p_items: items.map((item) => ({ product_id: item.id, quantity: item.quantity })),
   });
 
