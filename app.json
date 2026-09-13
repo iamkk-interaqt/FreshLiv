@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "name": "Gwalawala",
+    "slug": "gwalawala",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "scheme": "gwalawala",
+    "plugins": ["expo-router"],
+    "experiments": { "typedRoutes": true }
+  }
+}
