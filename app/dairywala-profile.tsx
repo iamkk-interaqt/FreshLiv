@@ -16,54 +16,26 @@ export default function DairywalaProfileScreen() {
   useEffect(() => {
     let mounted = true;
     const dairywalaId = String(id);
-
     async function load() {
-      setLoading(true);
-      setError('');
+      setLoading(true); setError('');
       try {
         const [{ data: profile, error: profileError }, productRows] = await Promise.all([
-          supabase
-            .from('dairywala_profiles')
-            .select('business_name, locality')
-            .eq('id', dairywalaId)
-            .eq('status', 'ACTIVE')
-            .maybeSingle(),
+          supabase.from('dairywala_profiles').select('business_name, locality').eq('id', dairywalaId).eq('status', 'ACTIVE').maybeSingle(),
           findActiveProducts(dairywalaId),
         ]);
-
         if (profileError) throw profileError;
         if (!profile) throw new Error('This Dairywala is no longer available.');
-
-        if (mounted) {
-          setBusinessName(profile.business_name);
-          setLocality(profile.locality ?? '');
-          setProducts(productRows);
-        }
+        if (mounted) { setBusinessName(profile.business_name); setLocality(profile.locality ?? ''); setProducts(productRows); }
       } catch (loadError) {
         if (mounted) setError(loadError instanceof Error ? loadError.message : 'Unable to load this Dairywala.');
-      } finally {
-        if (mounted) setLoading(false);
-      }
+      } finally { if (mounted) setLoading(false); }
     }
-
     load();
     return () => { mounted = false; };
   }, [id]);
 
-  if (loading) {
-    return <View style={styles.center}><ActivityIndicator /><Text style={styles.muted}>Loading Dairywala…</Text></View>;
-  }
-
-  if (error) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.eyebrow}>DAIRYWALA</Text>
-        <Text style={styles.title}>Unavailable</Text>
-        <Text style={styles.body}>{error}</Text>
-        <Pressable style={styles.button} onPress={() => router.back()}><Text style={styles.buttonText}>Go back</Text></Pressable>
-      </View>
-    );
-  }
+  if (loading) return <View style={styles.center}><ActivityIndicator /><Text style={styles.muted}>Loading Dairywala…</Text></View>;
+  if (error) return <View style={styles.container}><Text style={styles.eyebrow}>DAIRYWALA</Text><Text style={styles.title}>Unavailable</Text><Text style={styles.body}>{error}</Text><Pressable style={styles.button} onPress={() => router.back()}><Text style={styles.buttonText}>Go back</Text></Pressable></View>;
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -71,29 +43,21 @@ export default function DairywalaProfileScreen() {
       <Text style={styles.eyebrow}>DAIRYWALA</Text>
       <Text style={styles.title}>{businessName}</Text>
       {locality ? <Text style={styles.location}>{locality}</Text> : null}
-
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Available products</Text>
-        {products.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyTitle}>No products available yet</Text>
-            <Text style={styles.emptyBody}>This Dairywala is active, but no active products are currently listed.</Text>
-          </View>
-        ) : (
-          products.map((product) => (
-            <View key={product.id} style={styles.productCard}>
-              <View style={styles.productInfo}>
-                <Text style={styles.productName}>{product.name}</Text>
-                {product.description ? <Text style={styles.productDescription}>{product.description}</Text> : null}
-                {product.quantityValue && product.quantityUnit ? (
-                  <Text style={styles.productQuantity}>{product.quantityValue} {product.quantityUnit}</Text>
-                ) : null}
-              </View>
-              <Text style={styles.price}>₹{product.price.toFixed(2)}</Text>
+        {products.length === 0 ? <View style={styles.emptyState}><Text style={styles.emptyTitle}>No products available yet</Text><Text style={styles.emptyBody}>This Dairywala is active, but no active products are currently listed.</Text></View> : products.map((product) => (
+          <Pressable key={product.id} style={styles.productCard} onPress={() => router.push({ pathname: '/product', params: { id: product.id } })}>
+            <View style={styles.productInfo}>
+              <Text style={styles.productName}>{product.name}</Text>
+              {product.description ? <Text style={styles.productDescription}>{product.description}</Text> : null}
+              {product.quantityValue && product.quantityUnit ? <Text style={styles.productQuantity}>{product.quantityValue} {product.quantityUnit}</Text> : null}
+              <Text style={styles.tapHint}>Tap to choose quantity</Text>
             </View>
-          ))
-        )}
+            <Text style={styles.price}>₹{product.price.toFixed(2)}</Text>
+          </Pressable>
+        ))}
       </View>
+      <Pressable style={styles.cartButton} onPress={() => router.push('/cart')}><Text style={styles.cartButtonText}>View cart</Text></Pressable>
     </ScrollView>
   );
 }
@@ -114,10 +78,13 @@ const styles = StyleSheet.create({
   productName: { fontSize: 17, fontWeight: '750' },
   productDescription: { marginTop: 4, color: '#666', lineHeight: 19 },
   productQuantity: { marginTop: 5, color: '#888', fontSize: 13 },
+  tapHint: { marginTop: 8, color: '#111', fontSize: 12, fontWeight: '700' },
   price: { fontSize: 16, fontWeight: '800' },
   emptyState: { padding: 20, borderRadius: 16, borderWidth: 1, borderColor: '#e5e5e5' },
   emptyTitle: { fontSize: 17, fontWeight: '700' },
   emptyBody: { marginTop: 7, color: '#777', lineHeight: 21 },
   button: { marginTop: 24, height: 50, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: '#111' },
-  buttonText: { color: '#fff', fontWeight: '700' }
+  buttonText: { color: '#fff', fontWeight: '700' },
+  cartButton: { marginTop: 18, minHeight: 52, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#111' },
+  cartButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' }
 });
