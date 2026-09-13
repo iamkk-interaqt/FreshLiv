@@ -9,13 +9,18 @@ export default function DiscoveryScreen() {
   const { locality = '', postalCode = '' } = useLocalSearchParams<{ locality?: string; postalCode?: string }>();
   const [loading, setLoading] = useState(true);
   const [dairywalas, setDairywalas] = useState<DairywalaSummary[]>([]);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     let mounted = true;
     setLoading(true);
+    setError('');
     findActiveDairywalas({ latitude: 0, longitude: 0, locality: String(locality), postalCode: String(postalCode) })
       .then((results) => {
         if (mounted) setDairywalas(results);
+      })
+      .catch(() => {
+        if (mounted) setError('We could not load Dairywalas right now. Please try again.');
       })
       .finally(() => {
         if (mounted) setLoading(false);
@@ -33,6 +38,14 @@ export default function DiscoveryScreen() {
           <ActivityIndicator />
           <Text style={styles.muted}>Checking available Dairywalas…</Text>
         </View>
+      ) : error ? (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyTitle}>Something went wrong</Text>
+          <Text style={styles.emptyBody}>{error}</Text>
+          <Pressable style={styles.button} onPress={() => router.replace({ pathname: '/discovery', params: { locality, postalCode } })}>
+            <Text style={styles.buttonText}>Try again</Text>
+          </Pressable>
+        </View>
       ) : dairywalas.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyTitle}>No Dairywalas available here yet</Text>
@@ -46,10 +59,23 @@ export default function DiscoveryScreen() {
       ) : (
         <View style={styles.list}>
           {dairywalas.map((dairywala) => (
-            <View key={dairywala.id} style={styles.card}>
-              <Text style={styles.cardTitle}>{dairywala.businessName}</Text>
-              <Text style={styles.cardBody}>{dairywala.locality}</Text>
-            </View>
+            <Pressable
+              key={dairywala.id}
+              style={styles.card}
+              onPress={() => router.push({ pathname: '/dairywala-profile', params: { id: dairywala.id } })}
+            >
+              <View style={styles.cardTop}>
+                <View style={styles.cardInfo}>
+                  <Text style={styles.cardTitle}>{dairywala.businessName}</Text>
+                  <Text style={styles.cardBody}>{dairywala.locality || 'Local Dairywala'}</Text>
+                </View>
+                <Text style={styles.arrow}>›</Text>
+              </View>
+              <View style={styles.slots}>
+                {dairywala.morningSlotAvailable ? <Text style={styles.slot}>Morning</Text> : null}
+                {dairywala.eveningSlotAvailable ? <Text style={styles.slot}>Evening</Text> : null}
+              </View>
+            </Pressable>
           ))}
         </View>
       )}
@@ -70,6 +96,11 @@ const styles = StyleSheet.create({
   buttonText: { color: '#fff', fontWeight: '700' },
   list: { marginTop: 24, gap: 12 },
   card: { padding: 18, borderRadius: 15, borderWidth: 1, borderColor: '#e5e5e5' },
+  cardTop: { flexDirection: 'row', alignItems: 'center' },
+  cardInfo: { flex: 1 },
   cardTitle: { fontSize: 17, fontWeight: '700' },
-  cardBody: { marginTop: 5, color: '#777' }
+  cardBody: { marginTop: 5, color: '#777' },
+  arrow: { fontSize: 30, color: '#777', marginLeft: 12 },
+  slots: { flexDirection: 'row', gap: 8, marginTop: 13 },
+  slot: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, backgroundColor: '#f3f3f3', fontSize: 12, fontWeight: '700' }
 });
