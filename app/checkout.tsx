@@ -1,17 +1,22 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { CFPaymentGatewayService } from 'react-native-cashfree-pg-sdk';
+import { CFEnvironment, CFSession } from 'cashfree-pg-api-contract';
 import { getCartItems, getCartTotal } from '../src/services/cart';
 import { saveCustomerAddress, createPendingOrder } from '../src/services/checkout';
+import { createCashfreePaymentOrder, verifyCashfreePayment } from '../src/services/cashfree';
 import { supabase } from '../src/lib/supabase';
 
 type DeliverySlot = { id: string; code: string };
+type PendingPayment = { orderId: string; cashfreeOrderId: string };
 
 export default function CheckoutScreen() {
   const router = useRouter();
   const items = getCartItems();
   const total = getCartTotal();
   const dairywalaId = items[0]?.dairywalaId ?? '';
+  const pendingPayment = useRef<PendingPayment | null>(null);
   const [signedIn, setSignedIn] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [addressId, setAddressId] = useState('');
@@ -24,6 +29,36 @@ export default function CheckoutScreen() {
   const [postalCode, setPostalCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    CFPaymentGatewayService.setCallback({
+      onVerify: async (orderID: string) => {
+        const payment = pendingPayment.current;
+        if (!payment || payment.cashfreeOrderId !== orderID) return;
+        try {
+          setLoading(true);
+          await verifyCashfreePayment(payment.orderId, payment.cashfreeOrderId);
+          pendingPayment.current = null;
+          router.replace({ pathname: '/order-confirmed', params: { id: payment.orderId } });
+        } catch (e) {
+          setError(e instanceof Error ? e.message : 'Payment verification failed.');
+        } finally {
+          setLoading(false);
+        }
+      },
+      onError: (paymentError: unknown, orderID: string) => {
+        if (pendingPayment.current?.cashfreeOrderId === orderID) {
+          setError(`Payment was not completed for order ${orderID}.`);
+        }
+        setLoading(false);
+        console.warn('Cashfree payment error', paymentError);
+      },
+    });
+
+    return () => {
+      CFPaymentGatewayService.removeCallback();
+    };
+  }, [router]);
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
@@ -52,10 +87,20 @@ export default function CheckoutScreen() {
         if (!addressLine1 || !locality || !city || !state || !postalCode) throw new Error('Complete your delivery address.');
         savedAddressId = await saveCustomerAddress({ label: 'Home', addressLine1, locality, city, state, postalCode });
       }
+
       const orderId = await createPendingOrder(dairywalaId, savedAddressId, selectedSlotId, items);
-      router.replace({ pathname: '/order-confirmed', params: { id: orderId } });
-    } catch (e) { setError(e instanceof Error ? e.message : 'Unable to create your order.'); }
-    finally { setLoading(false); }
+      const payment = await createCashfreePaymentOrder(orderId);
+      pendingPayment.current = { orderId, cashfreeOrderId: payment.cashfreeOrderId };
+
+      const environment = payment.environment === 'PRODUCTION' ? CFEnvironment.PRODUCTION : CFEnvironment.SANDBOX;
+      const session = new CFSession(payment.paymentSessionId, payment.cashfreeOrderId, environment);
+      CFPaymentGatewayService.doWebPayment(session);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unable to start payment.');
+      pendingPayment.current = null;
+    } finally {
+      setLoading(false);
+    }
   }
 
   return <ScrollView contentContainerStyle={styles.container}>
@@ -72,7 +117,7 @@ export default function CheckoutScreen() {
     {!slots.length ? <Text style={styles.muted}>No delivery slot is currently available for this Dairywala.</Text> : null}
     {error ? <Text style={styles.error}>{error}</Text> : null}
     <View style={styles.summary}><Text style={styles.summaryTitle}>Order total</Text><Text style={styles.total}>₹{total.toFixed(2)}</Text></View>
-    <Pressable style={styles.button} disabled={loading || !selectedSlotId} onPress={placeOrder}>{loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Continue to payment</Text>}</Pressable>
+    <Pressable style={styles.button} disabled={loading || !selectedSlotId} onPress={placeOrder}>{loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Pay ₹{total.toFixed(2)}</Text>}</Pressable>
   </ScrollView>;
 }
 
