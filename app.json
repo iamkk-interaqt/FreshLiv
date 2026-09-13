@@ -7,6 +7,19 @@
     "userInterfaceStyle": "automatic",
     "scheme": "gwalawala",
     "plugins": ["expo-router"],
+    "ios": {
+      "infoPlist": {
+        "LSApplicationQueriesSchemes": [
+          "phonepe",
+          "tez",
+          "paytmmp",
+          "bhim",
+          "amazonpay",
+          "credpay",
+          "upi"
+        ]
+      }
+    },
     "experiments": { "typedRoutes": true }
   }
 }
