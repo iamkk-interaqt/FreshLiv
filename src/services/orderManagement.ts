@@ -63,30 +63,10 @@ export async function advanceDairywalaOrder(order: OrderRow) {
   const next = allowed[0];
   if (!next) throw new Error(`Order cannot move forward from ${order.status}.`);
 
-  const userId = await getCurrentUserId();
-  const { error: updateError } = await supabase
-    .from('orders')
-    .update({ status: next, updated_at: new Date().toISOString() })
-    .eq('id', order.id)
-    .eq('dairywala_id', order.dairywala_id);
-  if (updateError) throw updateError;
-
-  const { error: historyError } = await supabase.from('order_status_history').insert({
-    order_id: order.id,
-    from_status: order.status,
-    to_status: next,
-    actor_user_id: userId,
+  const { data, error } = await supabase.rpc('advance_order_status', {
+    p_order_id: order.id,
+    p_next_status: next,
   });
-  if (historyError) throw historyError;
-
-  const { error: notificationError } = await supabase.from('notifications').insert({
-    user_id: order.customer_id,
-    type: 'ORDER_STATUS',
-    title: `Order ${next.toLowerCase().replaceAll('_', ' ')}`,
-    body: `Your Gwalawala order is now ${next.toLowerCase().replaceAll('_', ' ')}.`,
-    data: { orderId: order.id, status: next },
-  });
-  if (notificationError) throw notificationError;
-
-  return next;
+  if (error) throw error;
+  return String(data || next);
 }
