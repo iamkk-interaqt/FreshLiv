@@ -1,0 +1,15 @@
+[actions.run]
+name = "Run"
+command = "bash ./script/build_and_run.sh"
+
+[actions.run_android]
+name = "Run Android"
+command = "bash ./script/build_and_run.sh --android"
+
+[actions.run_ios]
+name = "Run iOS"
+command = "bash ./script/build_and_run.sh --ios"
+
+[actions.run_web]
+name = "Run Web"
+command = "bash ./script/build_and_run.sh --web"
