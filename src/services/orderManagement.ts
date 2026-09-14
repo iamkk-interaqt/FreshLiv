@@ -63,9 +63,10 @@ export async function advanceDairywalaOrder(order: OrderRow) {
   const next = allowed[0];
   if (!next) throw new Error(`Order cannot move forward from ${order.status}.`);
 
-  const { data, error } = await supabase.rpc('advance_order_status', {
+  const { data, error } = await supabase.rpc('transition_order_status', {
     p_order_id: order.id,
-    p_next_status: next,
+    p_to_status: next,
+    p_note: null,
   });
   if (error) throw error;
   return String(data || next);
