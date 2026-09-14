@@ -3,7 +3,7 @@ export type Coordinates = {
   longitude: number;
 };
 
-export type CustomerLocation = Coordinates & {
+export type CustomerLocation = Partial<Coordinates> & {
   locality?: string;
   postalCode?: string;
 };
