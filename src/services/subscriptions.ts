@@ -28,8 +28,11 @@ export async function getMySubscriptions() {
 }
 
 export async function setSubscriptionStatus(subscriptionId: string, status: 'ACTIVE' | 'PAUSED' | 'SKIPPED' | 'CANCELLED') {
-  const id = await userId();
-  const { data, error } = await supabase.from('subscriptions').update({ status, updated_at: new Date().toISOString() }).eq('id', subscriptionId).eq('customer_id', id).select('*').single();
+  await userId();
+  const { data, error } = await supabase.rpc('set_customer_subscription_status', {
+    p_subscription_id: subscriptionId,
+    p_status: status,
+  });
   if (error) throw error;
   return data as SubscriptionRow;
 }
