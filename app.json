@@ -6,8 +6,20 @@
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "scheme": "gwalawala",
-    "plugins": ["expo-router"],
+    "plugins": [
+      "expo-router",
+      [
+        "expo-notifications",
+        {
+          "defaultChannel": "orders"
+        }
+      ]
+    ],
+    "android": {
+      "package": "com.gwalawala.app"
+    },
     "ios": {
+      "bundleIdentifier": "com.gwalawala.app",
       "infoPlist": {
         "LSApplicationQueriesSchemes": [
           "phonepe",
