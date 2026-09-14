@@ -1,0 +1,1 @@
+alter policy "admins manage commission rules" on public.marketplace_commission_rules to authenticated using ((select is_admin())) with check ((select is_admin()));
