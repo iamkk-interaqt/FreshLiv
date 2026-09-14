@@ -15,7 +15,7 @@ export default function DiscoveryScreen() {
     let mounted = true;
     setLoading(true);
     setError('');
-    findActiveDairywalas({ latitude: 0, longitude: 0, locality: String(locality), postalCode: String(postalCode) })
+    findActiveDairywalas({ locality: String(locality), postalCode: String(postalCode) })
       .then((results) => {
         if (mounted) setDairywalas(results);
       })
