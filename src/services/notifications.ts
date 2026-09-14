@@ -78,3 +78,38 @@ export function subscribeToNotificationEvents(
     responseSubscription?.remove();
   };
 }
+
+/**
+ * Subscribe to notifications created for the currently signed-in user.
+ * This provides immediate in-app delivery while the app is active; remote
+ * push delivery is handled separately by the trusted server dispatcher.
+ */
+export function subscribeToRealtimeNotifications(
+  onInsert?: (notification: Record<string, unknown>) => void,
+) {
+  let channel: ReturnType<typeof supabase.channel> | null = null;
+  let cancelled = false;
+
+  void supabase.auth.getUser().then(({ data: { user } }) => {
+    if (!user || cancelled) return;
+
+    channel = supabase
+      .channel(`gwalawala-notifications-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => onInsert?.(payload.new as Record<string, unknown>),
+      )
+      .subscribe();
+  });
+
+  return () => {
+    cancelled = true;
+    if (channel) void supabase.removeChannel(channel);
+  };
+}
