@@ -19,7 +19,7 @@ export default function WelcomeScreen() {
           <Text style={styles.primaryText}>Customer</Text>
         </Pressable>
 
-        <Pressable style={styles.secondaryButton} onPress={() => router.push('/dairywala')}>
+        <Pressable style={styles.secondaryButton} onPress={() => router.push('/dairywala-auth')}>
           <Text style={styles.secondaryText}>Dairywala / Business</Text>
         </Pressable>
       </View>
