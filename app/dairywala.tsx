@@ -1,25 +1,209 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { supabase } from '../src/lib/supabase';
+
+type Profile = {
+  id: string;
+  business_name: string;
+  contact_name: string | null;
+  phone: string | null;
+  whatsapp: string | null;
+  base_address: string | null;
+  locality: string | null;
+  city: string | null;
+  state: string | null;
+  postal_code: string | null;
+  status: string;
+};
+
+type Form = {
+  businessName: string;
+  contactName: string;
+  phone: string;
+  whatsapp: string;
+  address: string;
+  locality: string;
+  city: string;
+  state: string;
+  postalCode: string;
+};
+
+const EMPTY_FORM: Form = { businessName: '', contactName: '', phone: '', whatsapp: '', address: '', locality: '', city: '', state: '', postalCode: '' };
 
 export default function DairywalaScreen() {
-  return (
-    <View style={styles.container}>
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [form, setForm] = useState<Form>(EMPTY_FORM);
+  const [applicationStatus, setApplicationStatus] = useState<string | null>(null);
+  const [slotState, setSlotState] = useState({ morning: false, evening: false });
+
+  const load = useCallback(async () => {
+    setLoading(true); setError('');
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { router.replace('/dairywala-auth'); return; }
+
+      const { data: existing, error: profileError } = await supabase
+        .from('dairywala_profiles')
+        .select('id,business_name,contact_name,phone,whatsapp,base_address,locality,city,state,postal_code,status')
+        .eq('owner_user_id', user.id)
+        .maybeSingle();
+      if (profileError) throw profileError;
+
+      if (existing) {
+        const p = existing as Profile;
+        setProfile(p);
+        setForm({ businessName: p.business_name, contactName: p.contact_name ?? '', phone: p.phone ?? '', whatsapp: p.whatsapp ?? '', address: p.base_address ?? '', locality: p.locality ?? '', city: p.city ?? '', state: p.state ?? '', postalCode: p.postal_code ?? '' });
+        const [{ data: application }, { data: slots }] = await Promise.all([
+          supabase.from('dairywala_applications').select('source,submitted_at,rejection_reason').eq('dairywala_id', p.id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+          supabase.from('dairywala_delivery_slots').select('slot_code,active').eq('dairywala_id', p.id),
+        ]);
+        setApplicationStatus(application?.rejection_reason ? `Rejected: ${application.rejection_reason}` : application?.submitted_at ? p.status : null);
+        setSlotState({ morning: (slots ?? []).some(s => s.slot_code === 'MORNING' && s.active), evening: (slots ?? []).some(s => s.slot_code === 'EVENING' && s.active) });
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unable to load Dairywala account.');
+    } finally { setLoading(false); }
+  }, [router]);
+
+  useEffect(() => { load(); }, [load]);
+
+  function update(key: keyof Form, value: string) { setForm((current) => ({ ...current, [key]: value })); }
+
+  async function register() {
+    if (!form.businessName.trim() || !form.contactName.trim() || !form.phone.trim() || !form.address.trim() || !form.locality.trim() || !form.city.trim() || !form.state.trim() || !form.postalCode.trim()) {
+      setError('Please complete the business, contact and service-location fields.'); return;
+    }
+    setSaving(true); setError('');
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Your session has expired. Please sign in again.');
+
+      const { data: created, error: profileError } = await supabase.from('dairywala_profiles').insert({
+        owner_user_id: user.id,
+        business_name: form.businessName.trim(),
+        contact_name: form.contactName.trim(),
+        phone: form.phone.trim(),
+        whatsapp: form.whatsapp.trim() || null,
+        base_address: form.address.trim(),
+        locality: form.locality.trim(),
+        city: form.city.trim(),
+        state: form.state.trim(),
+        postal_code: form.postalCode.trim(),
+        status: 'APPLICATION_SUBMITTED',
+      }).select('id,business_name,contact_name,phone,whatsapp,base_address,locality,city,state,postal_code,status').single();
+      if (profileError) throw profileError;
+
+      const dairywalaId = created.id;
+      const { error: applicationError } = await supabase.from('dairywala_applications').insert({ dairywala_id: dairywalaId, source: 'SELF_REGISTRATION', submitted_at: new Date().toISOString() });
+      if (applicationError) throw applicationError;
+
+      const { error: areaError } = await supabase.from('dairywala_service_areas').insert({ dairywala_id: dairywalaId, locality: form.locality.trim(), city: form.city.trim(), state: form.state.trim(), postal_code: form.postalCode.trim() });
+      if (areaError) throw areaError;
+
+      const { error: slotError } = await supabase.from('dairywala_delivery_slots').insert([
+        { dairywala_id: dairywalaId, slot_code: 'MORNING', start_time: '06:00', end_time: '10:00', active: true },
+        { dairywala_id: dairywalaId, slot_code: 'EVENING', start_time: '16:00', end_time: '20:00', active: true },
+      ]);
+      if (slotError) throw slotError;
+
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Registration could not be completed.');
+    } finally { setSaving(false); }
+  }
+
+  async function signOut() { await supabase.auth.signOut(); router.replace('/'); }
+
+  if (loading) return <View style={styles.center}><ActivityIndicator /><Text style={styles.muted}>Loading Dairywala account…</Text></View>;
+
+  if (!profile) return (
+    <ScrollView style={styles.page} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <Pressable onPress={() => router.back()}><Text style={styles.back}>← Back</Text></Pressable>
       <Text style={styles.eyebrow}>DAIRYWALA / BUSINESS</Text>
-      <Text style={styles.title}>Grow your local dairy business</Text>
-      <Text style={styles.body}>Registration will capture your business, location, service area, products, pricing, delivery slots and settlement details.</Text>
-      <View style={styles.emptyState}>
-        <Text style={styles.emptyTitle}>Business onboarding comes next</Text>
-        <Text style={styles.emptyBody}>Applications will enter verification before a Dairywala can become ACTIVE and visible to customers.</Text>
+      <Text style={styles.title}>Register your dairy business</Text>
+      <Text style={styles.body}>Create your Dairywala profile. Your application will stay under verification until an admin activates it.</Text>
+      <Field label="Business name" value={form.businessName} onChangeText={(v) => update('businessName', v)} placeholder="Your dairy / shop name" />
+      <Field label="Owner / contact name" value={form.contactName} onChangeText={(v) => update('contactName', v)} placeholder="Full name" />
+      <Field label="Mobile number" value={form.phone} onChangeText={(v) => update('phone', v)} placeholder="10-digit mobile number" keyboardType="phone-pad" />
+      <Field label="WhatsApp (optional)" value={form.whatsapp} onChangeText={(v) => update('whatsapp', v)} placeholder="WhatsApp number" keyboardType="phone-pad" />
+      <Field label="Business address" value={form.address} onChangeText={(v) => update('address', v)} placeholder="Street / shop address" multiline />
+      <Field label="Locality" value={form.locality} onChangeText={(v) => update('locality', v)} placeholder="Area / locality" />
+      <Field label="City" value={form.city} onChangeText={(v) => update('city', v)} placeholder="City" />
+      <Field label="State" value={form.state} onChangeText={(v) => update('state', v)} placeholder="State" />
+      <Field label="PIN code" value={form.postalCode} onChangeText={(v) => update('postalCode', v)} placeholder="PIN code" keyboardType="number-pad" />
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+      <Pressable style={styles.primary} disabled={saving} onPress={register}>{saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>Submit Dairywala application</Text>}</Pressable>
+      <Text style={styles.note}>This app has no delivery-executive layer. You manage your own customer deliveries.</Text>
+    </ScrollView>
+  );
+
+  const active = profile.status === 'ACTIVE';
+  return (
+    <ScrollView style={styles.page} contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={false} onRefresh={load} />}>
+      <View style={styles.header}><View><Text style={styles.eyebrow}>DAIRYWALA</Text><Text style={styles.title}>{profile.business_name}</Text></View><Pressable onPress={signOut}><Text style={styles.back}>Sign out</Text></Pressable></View>
+      <View style={styles.statusCard}><Text style={styles.statusLabel}>Account status</Text><Text style={styles.statusValue}>{profile.status.replaceAll('_', ' ')}</Text><Text style={styles.muted}>{applicationStatus ? 'Your application is in the admin verification flow.' : 'Complete your application before operating.'}</Text></View>
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {!active ? <View style={styles.notice}><Text style={styles.noticeTitle}>Verification pending</Text><Text style={styles.muted}>Customers will only see your Dairywala after admin activation.</Text></View> : null}
+      <View style={styles.grid}>
+        <MenuCard title="Orders" subtitle="Accept and update customer orders" onPress={() => router.push('/dairywala-orders')} disabled={!active} />
+        <MenuCard title="Routes" subtitle="Morning/evening delivery stops" onPress={() => router.push('/dairywala-routes')} disabled={!active} />
+        <MenuCard title="Earnings" subtitle="Sales and settlement status" onPress={() => router.push('/dairywala-earnings')} disabled={!active} />
       </View>
-    </View>
+      <View style={styles.section}><Text style={styles.sectionTitle}>Delivery slots</Text><Text style={styles.muted}>Customers choose one of your available slots.</Text><View style={styles.slotRow}><Slot label="Morning" active={slotState.morning} /><Slot label="Evening" active={slotState.evening} /></View></View>
+      <View style={styles.section}><Text style={styles.sectionTitle}>Service area</Text><Text style={styles.row}>{profile.locality}, {profile.city}</Text><Text style={styles.row}>{profile.state} · {profile.postal_code}</Text></View>
+    </ScrollView>
   );
 }
 
+function Field({ label, value, onChangeText, placeholder, multiline, keyboardType }: { label: string; value: string; onChangeText: (value: string) => void; placeholder: string; multiline?: boolean; keyboardType?: 'default' | 'phone-pad' | 'number-pad' }) {
+  return <View style={styles.field}><Text style={styles.label}>{label}</Text><TextInput style={[styles.input, multiline && styles.multiline]} value={value} onChangeText={onChangeText} placeholder={placeholder} multiline={multiline} keyboardType={keyboardType} /></View>;
+}
+
+function MenuCard({ title, subtitle, onPress, disabled }: { title: string; subtitle: string; onPress: () => void; disabled?: boolean }) {
+  return <Pressable disabled={disabled} onPress={onPress} style={[styles.menuCard, disabled && styles.disabled]}><Text style={styles.menuTitle}>{title}</Text><Text style={styles.muted}>{subtitle}</Text><Text style={styles.open}>{disabled ? 'Available after activation' : 'Open →'}</Text></Pressable>;
+}
+
+function Slot({ label, active }: { label: string; active: boolean }) { return <View style={styles.slot}><Text style={styles.slotName}>{label}</Text><Text style={active ? styles.slotActive : styles.slotInactive}>{active ? 'ACTIVE' : 'OFF'}</Text></View>; }
+
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, paddingTop: 72, backgroundColor: '#fff' },
+  page: { flex: 1, backgroundColor: '#fff' },
+  content: { padding: 24, paddingTop: 56, paddingBottom: 48 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, backgroundColor: '#fff' },
+  header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  back: { fontSize: 15, fontWeight: '700' },
   eyebrow: { fontSize: 12, fontWeight: '800', letterSpacing: 1.5, color: '#777' },
-  title: { marginTop: 10, fontSize: 32, lineHeight: 38, fontWeight: '800' },
-  body: { marginTop: 12, fontSize: 16, lineHeight: 24, color: '#666' },
-  emptyState: { marginTop: 32, padding: 20, borderRadius: 16, borderWidth: 1, borderColor: '#e5e5e5' },
-  emptyTitle: { fontSize: 17, fontWeight: '700' },
-  emptyBody: { marginTop: 7, fontSize: 14, lineHeight: 21, color: '#777' }
+  title: { marginTop: 8, fontSize: 30, lineHeight: 36, fontWeight: '800' },
+  body: { marginTop: 12, color: '#666', fontSize: 16, lineHeight: 23 },
+  field: { marginTop: 16 },
+  label: { fontSize: 13, fontWeight: '700', marginBottom: 7 },
+  input: { minHeight: 52, borderWidth: 1, borderColor: '#ddd', borderRadius: 12, paddingHorizontal: 15, fontSize: 16 },
+  multiline: { minHeight: 90, paddingTop: 14, textAlignVertical: 'top' },
+  primary: { marginTop: 22, minHeight: 54, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#111' },
+  primaryText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  note: { marginTop: 14, color: '#888', fontSize: 12, lineHeight: 18, textAlign: 'center' },
+  error: { marginTop: 14, color: '#b00020', lineHeight: 20 },
+  statusCard: { marginTop: 24, padding: 18, borderRadius: 16, borderWidth: 1, borderColor: '#e5e5e5' },
+  statusLabel: { fontSize: 12, color: '#777' },
+  statusValue: { marginTop: 5, fontSize: 20, fontWeight: '800' },
+  muted: { marginTop: 5, color: '#777', lineHeight: 20 },
+  notice: { marginTop: 14, padding: 16, borderRadius: 14, backgroundColor: '#f7f7f7' },
+  noticeTitle: { fontWeight: '800', fontSize: 16 },
+  grid: { marginTop: 18, gap: 12 },
+  menuCard: { padding: 18, borderRadius: 15, borderWidth: 1, borderColor: '#e5e5e5' },
+  disabled: { opacity: 0.5 },
+  menuTitle: { fontSize: 18, fontWeight: '800' },
+  open: { marginTop: 12, fontSize: 13, fontWeight: '800' },
+  section: { marginTop: 22, padding: 18, borderRadius: 15, borderWidth: 1, borderColor: '#e5e5e5' },
+  sectionTitle: { fontSize: 18, fontWeight: '800' },
+  slotRow: { flexDirection: 'row', gap: 10, marginTop: 14 },
+  slot: { flex: 1, padding: 14, borderRadius: 12, backgroundColor: '#f7f7f7' },
+  slotName: { fontWeight: '700' },
+  slotActive: { marginTop: 6, color: '#166534', fontSize: 11, fontWeight: '800' },
+  slotInactive: { marginTop: 6, color: '#777', fontSize: 11, fontWeight: '800' },
+  row: { marginTop: 8, color: '#444' },
 });
