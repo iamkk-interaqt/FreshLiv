@@ -15,7 +15,8 @@ export default function CheckoutScreen() {
   const router = useRouter();
   const items = getCartItems();
   const total = getCartTotal();
-  const dairywalaId = items[0]?.dairywalaId ?? '';
+  const dairywalaIds = [...new Set(items.map((item) => item.dairywalaId).filter(Boolean))];
+  const dairywalaId = dairywalaIds[0] ?? '';
   const pendingPayment = useRef<PendingPayment | null>(null);
   const [signedIn, setSignedIn] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -50,6 +51,7 @@ export default function CheckoutScreen() {
         if (pendingPayment.current?.cashfreeOrderId === orderID) {
           setError(`Payment was not completed for order ${orderID}.`);
         }
+        pendingPayment.current = null;
         setLoading(false);
         console.warn('Cashfree payment error', paymentError);
       },
@@ -66,19 +68,25 @@ export default function CheckoutScreen() {
       setSignedIn(true);
       const { data: address } = await supabase.from('customer_addresses').select('id,address_line1,locality,city,state,postal_code').eq('customer_id', data.user.id).eq('is_default', true).maybeSingle();
       if (address) { setAddressId(address.id); setAddressLine1(address.address_line1); setLocality(address.locality); setCity(address.city); setState(address.state); setPostalCode(address.postal_code); }
-      if (dairywalaId) {
+      if (dairywalaIds.length > 1) {
+        setError('Your cart contains products from different Dairywalas. Please checkout one Dairywala at a time.');
+      } else if (dairywalaId) {
         const { data: deliverySlots } = await supabase.from('dairywala_delivery_slots').select('id,slot_code').eq('dairywala_id', dairywalaId).eq('active', true).order('slot_code');
         setSlots((deliverySlots ?? []).map((row) => ({ id: row.id, code: row.slot_code })));
       }
       setCheckingAuth(false);
     });
-  }, [dairywalaId]);
+  }, [dairywalaId, dairywalaIds.length]);
 
   if (checkingAuth) return <View style={styles.center}><ActivityIndicator /><Text style={styles.muted}>Checking sign in…</Text></View>;
   if (!signedIn) return <View style={styles.container}><Text style={styles.eyebrow}>CHECKOUT</Text><Text style={styles.title}>Sign in required</Text><Text style={styles.body}>Sign in with your mobile number before adding your delivery address and placing an order.</Text><Pressable style={styles.button} onPress={() => router.push('/customer-auth')}><Text style={styles.buttonText}>Sign in with OTP</Text></Pressable></View>;
   if (!items.length) return <View style={styles.container}><Text style={styles.title}>Your cart is empty</Text><Pressable style={styles.button} onPress={() => router.back()}><Text style={styles.buttonText}>Back</Text></Pressable></View>;
 
   async function placeOrder() {
+    if (dairywalaIds.length !== 1) {
+      setError('Checkout requires products from one Dairywala only.');
+      return;
+    }
     setLoading(true); setError('');
     try {
       if (!selectedSlotId) throw new Error('Select a delivery slot.');
@@ -95,10 +103,10 @@ export default function CheckoutScreen() {
       const environment = payment.environment === 'PRODUCTION' ? CFEnvironment.PRODUCTION : CFEnvironment.SANDBOX;
       const session = new CFSession(payment.paymentSessionId, payment.cashfreeOrderId, environment);
       CFPaymentGatewayService.doWebPayment(session);
+      // Keep the button locked until Cashfree calls onVerify/onError.
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unable to start payment.');
       pendingPayment.current = null;
-    } finally {
       setLoading(false);
     }
   }
@@ -117,7 +125,7 @@ export default function CheckoutScreen() {
     {!slots.length ? <Text style={styles.muted}>No delivery slot is currently available for this Dairywala.</Text> : null}
     {error ? <Text style={styles.error}>{error}</Text> : null}
     <View style={styles.summary}><Text style={styles.summaryTitle}>Order total</Text><Text style={styles.total}>₹{total.toFixed(2)}</Text></View>
-    <Pressable style={styles.button} disabled={loading || !selectedSlotId} onPress={placeOrder}>{loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Pay ₹{total.toFixed(2)}</Text>}</Pressable>
+    <Pressable style={styles.button} disabled={loading || !selectedSlotId || dairywalaIds.length !== 1} onPress={placeOrder}>{loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Pay ₹{total.toFixed(2)}</Text>}</Pressable>
   </ScrollView>;
 }
 
