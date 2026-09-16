@@ -5,6 +5,7 @@ import {
   subscribeToNotificationEvents,
   subscribeToRealtimeNotifications,
 } from '../src/services/notifications';
+import { AuthProvider } from '../src/auth/AuthProvider';
 
 export default function RootLayout() {
   useEffect(() => {
@@ -19,5 +20,9 @@ export default function RootLayout() {
     };
   }, []);
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <AuthProvider>
+      <Stack screenOptions={{ headerShown: false }} />
+    </AuthProvider>
+  );
 }
