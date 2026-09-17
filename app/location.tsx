@@ -13,39 +13,21 @@ export default function LocationScreen() {
     <View style={styles.container}>
       <Text style={styles.eyebrow}>CUSTOMER LOCATION</Text>
       <Text style={styles.title}>Where should we find your Dairywalas?</Text>
-      <Text style={styles.body}>
-        We use your area to find only active Dairywalas who actually serve your locality.
-      </Text>
+      <Text style={styles.body}>We use your area to find only active Dairywalas who actually serve your locality.</Text>
 
       <View style={styles.form}>
         <Text style={styles.label}>Locality / Area</Text>
-        <TextInput
-          value={locality}
-          onChangeText={setLocality}
-          placeholder="e.g. Indirapuram"
-          placeholderTextColor="#999"
-          style={styles.input}
-          autoCapitalize="words"
-        />
-
+        <TextInput value={locality} onChangeText={setLocality} placeholder="e.g. Indirapuram" placeholderTextColor="#999" style={styles.input} autoCapitalize="words" />
         <Text style={styles.label}>PIN code</Text>
-        <TextInput
-          value={postalCode}
-          onChangeText={setPostalCode}
-          placeholder="e.g. 201014"
-          placeholderTextColor="#999"
-          keyboardType="number-pad"
-          maxLength={6}
-          style={styles.input}
-        />
+        <TextInput value={postalCode} onChangeText={setPostalCode} placeholder="e.g. 201014" placeholderTextColor="#999" keyboardType="number-pad" maxLength={6} style={styles.input} />
       </View>
 
       <Pressable
         disabled={!canContinue}
-        onPress={() => router.push({ pathname: '/discovery', params: { locality, postalCode } })}
+        onPress={() => router.push({ pathname: '/customer-home', params: { locality, postalCode } })}
         style={[styles.button, !canContinue && styles.buttonDisabled]}
       >
-        <Text style={styles.buttonText}>Find Dairywalas</Text>
+        <Text style={styles.buttonText}>Continue</Text>
       </Pressable>
 
       <Text style={styles.note}>No location or Dairywala data is fabricated by the app.</Text>
