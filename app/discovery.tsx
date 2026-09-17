@@ -6,7 +6,12 @@ import type { DairywalaSummary } from '../src/types/marketplace';
 
 export default function DiscoveryScreen() {
   const router = useRouter();
-  const { locality = '', postalCode = '' } = useLocalSearchParams<{ locality?: string; postalCode?: string }>();
+  const {
+    locality = '',
+    postalCode = '',
+    product = '',
+    source = '',
+  } = useLocalSearchParams<{ locality?: string; postalCode?: string; product?: string; source?: string }>();
   const [loading, setLoading] = useState(true);
   const [dairywalas, setDairywalas] = useState<DairywalaSummary[]>([]);
   const [error, setError] = useState('');
@@ -15,7 +20,11 @@ export default function DiscoveryScreen() {
     let mounted = true;
     setLoading(true);
     setError('');
-    findActiveDairywalas({ locality: String(locality), postalCode: String(postalCode) })
+    findActiveDairywalas(
+      { locality: String(locality), postalCode: String(postalCode) },
+      String(product),
+      String(source),
+    )
       .then((results) => {
         if (mounted) setDairywalas(results);
       })
@@ -26,12 +35,14 @@ export default function DiscoveryScreen() {
         if (mounted) setLoading(false);
       });
     return () => { mounted = false; };
-  }, [locality, postalCode]);
+  }, [locality, postalCode, product, source]);
+
+  const discoveryLabel = [source, product].filter(Boolean).join(' ');
 
   return (
     <View style={styles.container}>
       <Text style={styles.eyebrow}>DAIRYWALAS NEAR YOU</Text>
-      <Text style={styles.title}>{locality || postalCode || 'Your area'}</Text>
+      <Text style={styles.title}>{discoveryLabel || locality || postalCode || 'Your area'}</Text>
 
       {loading ? (
         <View style={styles.center}>
@@ -42,7 +53,10 @@ export default function DiscoveryScreen() {
         <View style={styles.emptyState}>
           <Text style={styles.emptyTitle}>Something went wrong</Text>
           <Text style={styles.emptyBody}>{error}</Text>
-          <Pressable style={styles.button} onPress={() => router.replace({ pathname: '/discovery', params: { locality, postalCode } })}>
+          <Pressable
+            style={styles.button}
+            onPress={() => router.replace({ pathname: '/discovery', params: { locality, postalCode, product, source } })}
+          >
             <Text style={styles.buttonText}>Try again</Text>
           </Pressable>
         </View>
@@ -50,7 +64,7 @@ export default function DiscoveryScreen() {
         <View style={styles.emptyState}>
           <Text style={styles.emptyTitle}>No Dairywalas available here yet</Text>
           <Text style={styles.emptyBody}>
-            We do not have an active Dairywala serving this area yet. You can refer your local Dairywala to Gwalawala.
+            We do not have an active Dairywala serving this area with the selected product yet. You can refer your local Dairywala to Gwalawala.
           </Text>
           <Pressable style={styles.button} onPress={() => router.push('/customer')}>
             <Text style={styles.buttonText}>Change location</Text>
