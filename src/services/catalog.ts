@@ -76,7 +76,7 @@ export async function findAvailableCustomerProducts(location: CustomerLocation):
     seen.add(key);
     const normalized = normalize(rawName);
     const emojiKey = Object.keys(EMOJI_BY_KEY).find((candidate) => normalized === candidate || normalized.includes(candidate));
-    result.push({ key, label: toLabel(rawName), emoji: emojiKey ? EMOJI_BY_KEY[emojiKey] : '🥛' });
+    result.push({ key, label: toLabel(rawName), emoji: emojiKey ? EMOJI_BY_KEY[emojiKey] : '🛒' });
   }
   return result;
 }
