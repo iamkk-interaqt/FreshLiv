@@ -3,7 +3,13 @@ import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, T
 import { useFocusEffect } from 'expo-router';
 import { supabase } from '../src/lib/supabase';
 
-type Product = { id: string; name: string; description: string | null; quantity_value: number | null; quantity_unit: string | null; price: number; status: string };
+type Product = { id: string; name: string; description: string | null; product_type: string | null; quantity_value: number | null; quantity_unit: string | null; price: number; status: string };
+
+const SOURCE_OPTIONS = [
+  { value: 'COW', label: '🐄 Cow Milk' },
+  { value: 'BUFFALO', label: '🐃 Buffalo Milk' },
+  { value: 'MIXED', label: '🥛 Mixed Milk' },
+];
 
 export default function DairywalaProductsScreen() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -12,6 +18,7 @@ export default function DairywalaProductsScreen() {
   const [error, setError] = useState('');
   const [name, setName] = useState('Milk');
   const [description, setDescription] = useState('');
+  const [productType, setProductType] = useState('COW');
   const [quantity, setQuantity] = useState('1');
   const [unit, setUnit] = useState('L');
   const [price, setPrice] = useState('');
@@ -25,7 +32,7 @@ export default function DairywalaProductsScreen() {
       if (profileError) throw profileError;
       if (!profile) throw new Error('Complete Dairywala registration first.');
       if (profile.status !== 'ACTIVE') throw new Error('Products can be managed after admin activation.');
-      const { data, error: productError } = await supabase.from('products').select('id,name,description,quantity_value,quantity_unit,price,status').eq('dairywala_id', profile.id).order('created_at', { ascending: false });
+      const { data, error: productError } = await supabase.from('products').select('id,name,description,product_type,quantity_value,quantity_unit,price,status').eq('dairywala_id', profile.id).order('created_at', { ascending: false });
       if (productError) throw productError;
       setProducts((data ?? []) as Product[]);
     } catch (e) { setError(e instanceof Error ? e.message : 'Unable to load products.'); }
@@ -37,8 +44,13 @@ export default function DairywalaProductsScreen() {
   async function addProduct() {
     const parsedPrice = Number(price);
     const parsedQuantity = Number(quantity);
-    if (!name.trim() || !Number.isFinite(parsedPrice) || parsedPrice <= 0 || !Number.isFinite(parsedQuantity) || parsedQuantity <= 0 || !unit.trim()) {
+    const normalizedName = name.trim();
+    const selectedType = normalizedName.toLowerCase().includes('milk') ? productType : null;
+    if (!normalizedName || !Number.isFinite(parsedPrice) || parsedPrice <= 0 || !Number.isFinite(parsedQuantity) || parsedQuantity <= 0 || !unit.trim()) {
       setError('Enter a product name, valid quantity, unit and price.'); return;
+    }
+    if (normalizedName.toLowerCase().includes('milk') && !selectedType) {
+      setError('Select the milk source.'); return;
     }
     setSaving(true); setError('');
     try {
@@ -46,7 +58,7 @@ export default function DairywalaProductsScreen() {
       if (!user) throw new Error('Please sign in again.');
       const { data: profile } = await supabase.from('dairywala_profiles').select('id,status').eq('owner_user_id', user.id).maybeSingle();
       if (!profile || profile.status !== 'ACTIVE') throw new Error('Dairywala must be ACTIVE before adding products.');
-      const { error: insertError } = await supabase.from('products').insert({ dairywala_id: profile.id, name: name.trim(), description: description.trim() || null, quantity_value: parsedQuantity, quantity_unit: unit.trim(), price: parsedPrice, status: 'ACTIVE' });
+      const { error: insertError } = await supabase.from('products').insert({ dairywala_id: profile.id, name: normalizedName, description: description.trim() || null, product_type: selectedType, quantity_value: parsedQuantity, quantity_unit: unit.trim(), price: parsedPrice, status: 'ACTIVE' });
       if (insertError) throw insertError;
       setDescription(''); setPrice(''); await load();
     } catch (e) { setError(e instanceof Error ? e.message : 'Product could not be added.'); }
@@ -68,14 +80,18 @@ export default function DairywalaProductsScreen() {
     <View style={styles.form}>
       <Text style={styles.sectionTitle}>Add product</Text>
       <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Product name" />
+      {name.trim().toLowerCase().includes('milk') ? <>
+        <Text style={styles.label}>Milk source</Text>
+        <View style={styles.options}>{SOURCE_OPTIONS.map(option => <Pressable key={option.value} onPress={() => setProductType(option.value)} style={[styles.option, productType === option.value && styles.optionSelected]}><Text style={productType === option.value ? styles.optionTextSelected : styles.optionText}>{option.label}</Text></Pressable>)}</View>
+      </> : null}
       <TextInput style={styles.input} value={description} onChangeText={setDescription} placeholder="Description (optional)" />
       <View style={styles.row}><TextInput style={[styles.input, styles.half]} value={quantity} onChangeText={setQuantity} placeholder="Quantity" keyboardType="decimal-pad" /><TextInput style={[styles.input, styles.half]} value={unit} onChangeText={setUnit} placeholder="Unit e.g. L" /></View>
       <TextInput style={styles.input} value={price} onChangeText={setPrice} placeholder="Price in ₹" keyboardType="decimal-pad" />
       <Pressable style={styles.primary} disabled={saving || loading} onPress={addProduct}>{saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>Add active product</Text>}</Pressable>
     </View>
     <Text style={styles.sectionTitle}>Your products</Text>
-    {loading ? <ActivityIndicator /> : products.length === 0 ? <View style={styles.empty}><Text>No products yet.</Text></View> : products.map(product => <View key={product.id} style={styles.card}><View style={styles.grow}><Text style={styles.product}>{product.name}</Text><Text style={styles.muted}>{product.quantity_value ?? ''} {product.quantity_unit ?? ''} · ₹{Number(product.price).toFixed(2)}</Text>{product.description ? <Text style={styles.muted}>{product.description}</Text> : null}</View><Pressable onPress={() => toggle(product)}><Text style={product.status === 'ACTIVE' ? styles.active : styles.inactive}>{product.status === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE'}</Text></Pressable></View>)}
+    {loading ? <ActivityIndicator /> : products.length === 0 ? <View style={styles.empty}><Text>No products yet.</Text></View> : products.map(product => <View key={product.id} style={styles.card}><View style={styles.grow}><Text style={styles.product}>{product.name}</Text><Text style={styles.muted}>{product.product_type || 'Source not set'} · {product.quantity_value ?? ''} {product.quantity_unit ?? ''} · ₹{Number(product.price).toFixed(2)}</Text>{product.description ? <Text style={styles.muted}>{product.description}</Text> : null}</View><Pressable onPress={() => toggle(product)}><Text style={product.status === 'ACTIVE' ? styles.active : styles.inactive}>{product.status === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE'}</Text></Pressable></View>)}
   </ScrollView>;
 }
 
-const styles = StyleSheet.create({ page:{flex:1,backgroundColor:'#fff'}, content:{padding:24,paddingTop:56,paddingBottom:48}, eyebrow:{fontSize:12,fontWeight:'800',letterSpacing:1.5,color:'#777'}, title:{marginTop:8,fontSize:30,fontWeight:'800'}, muted:{marginTop:5,color:'#777',lineHeight:20}, error:{marginTop:14,color:'#b00020'}, form:{marginTop:22,padding:18,borderWidth:1,borderColor:'#e5e5e5',borderRadius:15,marginBottom:24}, sectionTitle:{fontSize:19,fontWeight:'800',marginBottom:12}, input:{minHeight:50,borderWidth:1,borderColor:'#ddd',borderRadius:11,paddingHorizontal:14,fontSize:16,marginBottom:10}, row:{flexDirection:'row',gap:10}, half:{flex:1}, primary:{minHeight:50,borderRadius:12,backgroundColor:'#111',alignItems:'center',justifyContent:'center'},primaryText:{color:'#fff',fontWeight:'700'}, card:{marginTop:10,padding:16,borderWidth:1,borderColor:'#e5e5e5',borderRadius:14,flexDirection:'row',alignItems:'center'},grow:{flex:1},product:{fontSize:17,fontWeight:'800'},active:{fontSize:11,fontWeight:'800',color:'#166534'},inactive:{fontSize:11,fontWeight:'800',color:'#777'},empty:{padding:20,borderWidth:1,borderColor:'#e5e5e5',borderRadius:14}}
+const styles = StyleSheet.create({ page:{flex:1,backgroundColor:'#fff'}, content:{padding:24,paddingTop:56,paddingBottom:48}, eyebrow:{fontSize:12,fontWeight:'800',letterSpacing:1.5,color:'#777'}, title:{marginTop:8,fontSize:30,fontWeight:'800'}, muted:{marginTop:5,color:'#777',lineHeight:20}, error:{marginTop:14,color:'#b00020'}, form:{marginTop:22,padding:18,borderWidth:1,borderColor:'#e5e5e5',borderRadius:15,marginBottom:24}, sectionTitle:{fontSize:19,fontWeight:'800',marginBottom:12}, label:{fontSize:13,fontWeight:'700',marginBottom:8}, input:{minHeight:50,borderWidth:1,borderColor:'#ddd',borderRadius:11,paddingHorizontal:14,fontSize:16,marginBottom:10}, row:{flexDirection:'row',gap:10}, half:{flex:1}, options:{gap:8,marginBottom:12}, option:{minHeight:46,borderWidth:1,borderColor:'#ddd',borderRadius:11,justifyContent:'center',paddingHorizontal:14}, optionSelected:{borderColor:'#111',backgroundColor:'#f5f5f5'}, optionText:{fontSize:15,color:'#444'}, optionTextSelected:{fontSize:15,fontWeight:'800',color:'#111'}, primary:{minHeight:50,borderRadius:12,backgroundColor:'#111',alignItems:'center',justifyContent:'center'},primaryText:{color:'#fff',fontWeight:'700'}, card:{marginTop:10,padding:16,borderWidth:1,borderColor:'#e5e5e5',borderRadius:14,flexDirection:'row',alignItems:'center'},grow:{flex:1},product:{fontSize:17,fontWeight:'800'},active:{fontSize:11,fontWeight:'800',color:'#166534'},inactive:{fontSize:11,fontWeight:'800',color:'#777'},empty:{padding:20,borderWidth:1,borderColor:'#e5e5e5',borderRadius:14}}
