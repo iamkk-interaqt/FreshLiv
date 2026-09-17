@@ -3,95 +3,14 @@ import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, T
 import { useFocusEffect } from 'expo-router';
 import { supabase } from '../src/lib/supabase';
 
-type Product = { id: string; name: string; description: string | null; product_type: string | null; quantity_value: number | null; quantity_unit: string | null; price: number; status: string };
-
-const SOURCE_OPTIONS = [
-  { value: 'COW', label: '🐄 Cow Milk' },
-  { value: 'BUFFALO', label: '🐃 Buffalo Milk' },
-  { value: 'MIXED', label: '🥛 Mixed Milk' },
-];
-
-export default function DairywalaProductsScreen() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [name, setName] = useState('Milk');
-  const [description, setDescription] = useState('');
-  const [productType, setProductType] = useState('COW');
-  const [quantity, setQuantity] = useState('1');
-  const [unit, setUnit] = useState('L');
-  const [price, setPrice] = useState('');
-
-  const load = useCallback(async () => {
-    setLoading(true); setError('');
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Please sign in again.');
-      const { data: profile, error: profileError } = await supabase.from('dairywala_profiles').select('id,status').eq('owner_user_id', user.id).maybeSingle();
-      if (profileError) throw profileError;
-      if (!profile) throw new Error('Complete Dairywala registration first.');
-      if (profile.status !== 'ACTIVE') throw new Error('Products can be managed after admin activation.');
-      const { data, error: productError } = await supabase.from('products').select('id,name,description,product_type,quantity_value,quantity_unit,price,status').eq('dairywala_id', profile.id).order('created_at', { ascending: false });
-      if (productError) throw productError;
-      setProducts((data ?? []) as Product[]);
-    } catch (e) { setError(e instanceof Error ? e.message : 'Unable to load products.'); }
-    finally { setLoading(false); }
-  }, []);
-
-  useFocusEffect(useCallback(() => { load(); }, [load]));
-
-  async function addProduct() {
-    const parsedPrice = Number(price);
-    const parsedQuantity = Number(quantity);
-    const normalizedName = name.trim();
-    const selectedType = normalizedName.toLowerCase().includes('milk') ? productType : null;
-    if (!normalizedName || !Number.isFinite(parsedPrice) || parsedPrice <= 0 || !Number.isFinite(parsedQuantity) || parsedQuantity <= 0 || !unit.trim()) {
-      setError('Enter a product name, valid quantity, unit and price.'); return;
-    }
-    if (normalizedName.toLowerCase().includes('milk') && !selectedType) {
-      setError('Select the milk source.'); return;
-    }
-    setSaving(true); setError('');
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Please sign in again.');
-      const { data: profile } = await supabase.from('dairywala_profiles').select('id,status').eq('owner_user_id', user.id).maybeSingle();
-      if (!profile || profile.status !== 'ACTIVE') throw new Error('Dairywala must be ACTIVE before adding products.');
-      const { error: insertError } = await supabase.from('products').insert({ dairywala_id: profile.id, name: normalizedName, description: description.trim() || null, product_type: selectedType, quantity_value: parsedQuantity, quantity_unit: unit.trim(), price: parsedPrice, status: 'ACTIVE' });
-      if (insertError) throw insertError;
-      setDescription(''); setPrice(''); await load();
-    } catch (e) { setError(e instanceof Error ? e.message : 'Product could not be added.'); }
-    finally { setSaving(false); }
-  }
-
-  async function toggle(product: Product) {
-    setError('');
-    const next = product.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-    const { error: updateError } = await supabase.from('products').update({ status: next }).eq('id', product.id);
-    if (updateError) setError(updateError.message); else await load();
-  }
-
-  return <ScrollView style={styles.page} contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={false} onRefresh={load} />}>
-    <Text style={styles.eyebrow}>DAIRYWALA</Text>
-    <Text style={styles.title}>Products & prices</Text>
-    <Text style={styles.muted}>Manage what customers can order from your dairy.</Text>
-    {error ? <Text style={styles.error}>{error}</Text> : null}
-    <View style={styles.form}>
-      <Text style={styles.sectionTitle}>Add product</Text>
-      <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Product name" />
-      {name.trim().toLowerCase().includes('milk') ? <>
-        <Text style={styles.label}>Milk source</Text>
-        <View style={styles.options}>{SOURCE_OPTIONS.map(option => <Pressable key={option.value} onPress={() => setProductType(option.value)} style={[styles.option, productType === option.value && styles.optionSelected]}><Text style={productType === option.value ? styles.optionTextSelected : styles.optionText}>{option.label}</Text></Pressable>)}</View>
-      </> : null}
-      <TextInput style={styles.input} value={description} onChangeText={setDescription} placeholder="Description (optional)" />
-      <View style={styles.row}><TextInput style={[styles.input, styles.half]} value={quantity} onChangeText={setQuantity} placeholder="Quantity" keyboardType="decimal-pad" /><TextInput style={[styles.input, styles.half]} value={unit} onChangeText={setUnit} placeholder="Unit e.g. L" /></View>
-      <TextInput style={styles.input} value={price} onChangeText={setPrice} placeholder="Price in ₹" keyboardType="decimal-pad" />
-      <Pressable style={styles.primary} disabled={saving || loading} onPress={addProduct}>{saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>Add active product</Text>}</Pressable>
-    </View>
-    <Text style={styles.sectionTitle}>Your products</Text>
-    {loading ? <ActivityIndicator /> : products.length === 0 ? <View style={styles.empty}><Text>No products yet.</Text></View> : products.map(product => <View key={product.id} style={styles.card}><View style={styles.grow}><Text style={styles.product}>{product.name}</Text><Text style={styles.muted}>{product.product_type || 'Source not set'} · {product.quantity_value ?? ''} {product.quantity_unit ?? ''} · ₹{Number(product.price).toFixed(2)}</Text>{product.description ? <Text style={styles.muted}>{product.description}</Text> : null}</View><Pressable onPress={() => toggle(product)}><Text style={product.status === 'ACTIVE' ? styles.active : styles.inactive}>{product.status === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE'}</Text></Pressable></View>)}
-  </ScrollView>;
-}
-
-const styles = StyleSheet.create({ page:{flex:1,backgroundColor:'#fff'}, content:{padding:24,paddingTop:56,paddingBottom:48}, eyebrow:{fontSize:12,fontWeight:'800',letterSpacing:1.5,color:'#777'}, title:{marginTop:8,fontSize:30,fontWeight:'800'}, muted:{marginTop:5,color:'#777',lineHeight:20}, error:{marginTop:14,color:'#b00020'}, form:{marginTop:22,padding:18,borderWidth:1,borderColor:'#e5e5e5',borderRadius:15,marginBottom:24}, sectionTitle:{fontSize:19,fontWeight:'800',marginBottom:12}, label:{fontSize:13,fontWeight:'700',marginBottom:8}, input:{minHeight:50,borderWidth:1,borderColor:'#ddd',borderRadius:11,paddingHorizontal:14,fontSize:16,marginBottom:10}, row:{flexDirection:'row',gap:10}, half:{flex:1}, options:{gap:8,marginBottom:12}, option:{minHeight:46,borderWidth:1,borderColor:'#ddd',borderRadius:11,justifyContent:'center',paddingHorizontal:14}, optionSelected:{borderColor:'#111',backgroundColor:'#f5f5f5'}, optionText:{fontSize:15,color:'#444'}, optionTextSelected:{fontSize:15,fontWeight:'800',color:'#111'}, primary:{minHeight:50,borderRadius:12,backgroundColor:'#111',alignItems:'center',justifyContent:'center'},primaryText:{color:'#fff',fontWeight:'700'}, card:{marginTop:10,padding:16,borderWidth:1,borderColor:'#e5e5e5',borderRadius:14,flexDirection:'row',alignItems:'center'},grow:{flex:1},product:{fontSize:17,fontWeight:'800'},active:{fontSize:11,fontWeight:'800',color:'#166534'},inactive:{fontSize:11,fontWeight:'800',color:'#777'},empty:{padding:20,borderWidth:1,borderColor:'#e5e5e5',borderRadius:14}}
+type Product = { id:string; name:string; description:string|null; product_type:string|null; quantity_value:number|null; quantity_unit:string|null; price:number; status:string };
+const SOURCE_OPTIONS=[{value:'COW',label:'🐄 Cow Milk'},{value:'BUFFALO',label:'🐃 Buffalo Milk'},{value:'MIXED',label:'🥛 Mixed Milk'}];
+const sourceLabel=(v:string|null)=>v==='COW'?'🐄 Cow Milk':v==='BUFFALO'?'🐃 Buffalo Milk':v==='MIXED'?'🥛 Mixed Milk':'Source not set';
+export default function DairywalaProductsScreen(){
+ const[products,setProducts]=useState<Product[]>([]);const[loading,setLoading]=useState(true);const[saving,setSaving]=useState(false);const[error,setError]=useState('');const[name,setName]=useState('Milk');const[description,setDescription]=useState('');const[productType,setProductType]=useState('');const[quantity,setQuantity]=useState('1');const[unit,setUnit]=useState('L');const[price,setPrice]=useState('');
+ const load=useCallback(async()=>{setLoading(true);setError('');try{const{data:{user}}=await supabase.auth.getUser();if(!user)throw new Error('Please sign in again.');const{data:profile,error:pe}=await supabase.from('dairywala_profiles').select('id,status').eq('owner_user_id',user.id).maybeSingle();if(pe)throw pe;if(!profile)throw new Error('Complete Dairywala registration first.');if(profile.status!=='ACTIVE')throw new Error('Products can be managed after admin activation.');const{data,error:qe}=await supabase.from('products').select('id,name,description,product_type,quantity_value,quantity_unit,price,status').eq('dairywala_id',profile.id).order('created_at',{ascending:false});if(qe)throw qe;setProducts((data??[]) as Product[])}catch(e){setError(e instanceof Error?e.message:'Unable to load products.')}finally{setLoading(false)}},[]);
+ useFocusEffect(useCallback(()=>{load()},[load]));
+ async function addProduct(){const parsedPrice=Number(price),parsedQuantity=Number(quantity),normalizedName=name.trim();if(!normalizedName||!Number.isFinite(parsedPrice)||parsedPrice<=0||!Number.isFinite(parsedQuantity)||parsedQuantity<=0||!unit.trim()){setError('Enter a product name, valid quantity, unit and price.');return}if(!productType){setError('Select the milk source for this product.');return}setSaving(true);setError('');try{const{data:{user}}=await supabase.auth.getUser();if(!user)throw new Error('Please sign in again.');const{data:profile}=await supabase.from('dairywala_profiles').select('id,status').eq('owner_user_id',user.id).maybeSingle();if(!profile||profile.status!=='ACTIVE')throw new Error('Dairywala must be ACTIVE before adding products.');const{error:e}=await supabase.from('products').insert({dairywala_id:profile.id,name:normalizedName,description:description.trim()||null,product_type:productType,quantity_value:parsedQuantity,quantity_unit:unit.trim(),price:parsedPrice,status:'ACTIVE'});if(e)throw e;setDescription('');setPrice('');setProductType('');await load()}catch(e){setError(e instanceof Error?e.message:'Product could not be added.')}finally{setSaving(false)}}
+ async function toggle(product:Product){setError('');const next=product.status==='ACTIVE'?'INACTIVE':'ACTIVE';const{error:e}=await supabase.from('products').update({status:next}).eq('id',product.id);if(e)setError(e.message);else await load()}
+ return <ScrollView style={styles.page} contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={false} onRefresh={load}/>}> <Text style={styles.eyebrow}>DAIRYWALA</Text><Text style={styles.title}>Products & prices</Text><Text style={styles.muted}>Every product must carry its milk source so customers and the marketplace can identify it correctly.</Text>{error?<Text style={styles.error}>{error}</Text>:null}<View style={styles.form}><Text style={styles.sectionTitle}>Add product</Text><TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Product name"/><Text style={styles.label}>Milk source</Text><View style={styles.options}>{SOURCE_OPTIONS.map(o=><Pressable key={o.value} onPress={()=>setProductType(o.value)} style={[styles.option,productType===o.value&&styles.optionSelected]}><Text style={productType===o.value?styles.optionTextSelected:styles.optionText}>{o.label}</Text></Pressable>)}</View><TextInput style={styles.input} value={description} onChangeText={setDescription} placeholder="Description (optional)"/><View style={styles.row}><TextInput style={[styles.input,styles.half]} value={quantity} onChangeText={setQuantity} placeholder="Quantity" keyboardType="decimal-pad"/><TextInput style={[styles.input,styles.half]} value={unit} onChangeText={setUnit} placeholder="Unit e.g. L"/></View><TextInput style={styles.input} value={price} onChangeText={setPrice} placeholder="Price in ₹" keyboardType="decimal-pad"/><Pressable style={styles.primary} disabled={saving||loading} onPress={addProduct}>{saving?<ActivityIndicator color="#fff"/>:<Text style={styles.primaryText}>Add active product</Text>}</Pressable></View><Text style={styles.sectionTitle}>Your products</Text>{loading?<ActivityIndicator/>:products.length===0?<View style={styles.empty}><Text>No products yet.</Text></View>:products.map(p=><View key={p.id} style={styles.card}><View style={styles.grow}><Text style={styles.product}>{p.name}</Text><Text style={styles.muted}>{sourceLabel(p.product_type)} · {p.quantity_value??''} {p.quantity_unit??''} · ₹{Number(p.price).toFixed(2)}</Text>{p.description?<Text style={styles.muted}>{p.description}</Text>:null}</View><Pressable onPress={()=>toggle(p)}><Text style={p.status==='ACTIVE'?styles.active:styles.inactive}>{p.status==='ACTIVE'?'ACTIVE':'INACTIVE'}</Text></Pressable></View>)}</ScrollView>}
+const styles=StyleSheet.create({page:{flex:1,backgroundColor:'#fff'},content:{padding:24,paddingTop:56,paddingBottom:48},eyebrow:{fontSize:12,fontWeight:'800',letterSpacing:1.5,color:'#777'},title:{marginTop:8,fontSize:30,fontWeight:'800'},muted:{marginTop:5,color:'#777',lineHeight:20},error:{marginTop:14,color:'#b00020'},form:{marginTop:22,padding:18,borderWidth:1,borderColor:'#e5e5e5',borderRadius:15,marginBottom:24},sectionTitle:{fontSize:19,fontWeight:'800',marginBottom:12},label:{fontSize:13,fontWeight:'700',marginBottom:8},input:{minHeight:50,borderWidth:1,borderColor:'#ddd',borderRadius:11,paddingHorizontal:14,fontSize:16,marginBottom:10},row:{flexDirection:'row',gap:10},half:{flex:1},options:{gap:8,marginBottom:12},option:{minHeight:46,borderWidth:1,borderColor:'#ddd',borderRadius:11,justifyContent:'center',paddingHorizontal:14},optionSelected:{borderColor:'#111',backgroundColor:'#f5f5f5'},optionText:{fontSize:15,color:'#444'},optionTextSelected:{fontSize:15,fontWeight:'800',color:'#111'},primary:{minHeight:50,borderRadius:12,backgroundColor:'#111',alignItems:'center',justifyContent:'center'},primaryText:{color:'#fff',fontWeight:'700'},card:{marginTop:10,padding:16,borderWidth:1,borderColor:'#e5e5e5',borderRadius:14,flexDirection:'row',alignItems:'center'},grow:{flex:1},product:{fontSize:17,fontWeight:'800'},active:{fontSize:11,fontWeight:'800',color:'#166534'},inactive:{fontSize:11,fontWeight:'800',color:'#777'},empty:{padding:20,borderWidth:1,borderColor:'#e5e5e5',borderRadius:14}});
