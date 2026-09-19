@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { CFPaymentGatewayService } from 'react-native-cashfree-pg-sdk';
 import { CFEnvironment, CFSession } from 'cashfree-pg-api-contract';
-import { getCartItems, getCartTotal, clearCart } from '../src/services/cart';
+import { getCartItems, getCartTotal, clearCart, getPurchaseContext } from '../src/services/cart';
 import { saveCustomerAddress, createPendingOrder } from '../src/services/checkout';
 import { createCashfreePaymentOrder, verifyCashfreePayment } from '../src/services/cashfree';
 import { supabase } from '../src/lib/supabase';
@@ -17,6 +17,7 @@ export default function CheckoutScreen() {
   const { user, loading: authLoading } = useAuth();
   const items = getCartItems();
   const total = getCartTotal();
+  const purchaseContext = getPurchaseContext();
   const dairywalaIds = [...new Set(items.map((item) => item.dairywalaId).filter(Boolean))];
   const dairywalaId = dairywalaIds[0] ?? '';
   const pendingPayment = useRef<PendingPayment | null>(null);
@@ -32,6 +33,8 @@ export default function CheckoutScreen() {
   const [postalCode, setPostalCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [plusActive, setPlusActive] = useState(false);
+  const [bulkFee, setBulkFee] = useState(99);
 
   useEffect(() => {
     CFPaymentGatewayService.setCallback({
@@ -74,6 +77,12 @@ export default function CheckoutScreen() {
           .eq('is_default', true)
           .maybeSingle();
         if (cancelled) return;
+        const [{ data: plus }, { data: fee }] = await Promise.all([
+          supabase.from('business_subscriptions').select('status,expires_at').eq('customer_id', user.id).eq('status','ACTIVE').maybeSingle(),
+          supabase.rpc('get_monetization_amount',{p_key:'bulk_one_time_fee'}),
+        ]);
+        if (plus?.status === 'ACTIVE' && (!plus.expires_at || new Date(plus.expires_at) > new Date())) setPlusActive(true);
+        setBulkFee(Number(fee ?? 99));
         if (address) {
           setAddressId(address.id); setAddressLine1(address.address_line1); setLocality(address.locality);
           setCity(address.city); setState(address.state); setPostalCode(address.postal_code);
@@ -136,8 +145,16 @@ export default function CheckoutScreen() {
     <View style={styles.slotRow}>{slots.map((entry) => <Pressable key={entry.id} onPress={() => setSelectedSlotId(entry.id)} style={[styles.slot, selectedSlotId === entry.id && styles.slotSelected]}><Text style={selectedSlotId === entry.id ? styles.slotSelectedText : styles.slotText}>{entry.code}</Text></Pressable>)}</View>
     {!slots.length ? <Text style={styles.muted}>No delivery slot is currently available for this Dairywala.</Text> : null}
     {error ? <Text style={styles.error}>{error}</Text> : null}
-    <View style={styles.summary}><Text style={styles.summaryTitle}>Order total</Text><Text style={styles.total}>₹{total.toFixed(2)}</Text></View>
-    <Pressable style={styles.button} disabled={loading || !selectedSlotId || dairywalaIds.length !== 1} onPress={placeOrder}>{loading ? <ActivityIndicator color="#fff"/> : <Text style={styles.buttonText}>Pay ₹{total.toFixed(2)}</Text>}</Pressable>
+    <View style={styles.summary}>
+      <View>
+        <Text style={styles.summaryTitle}>Order summary</Text>
+        {purchaseContext.customerType==='BUSINESS' ? <Text style={styles.fee}>{purchaseContext.orderType==='RECURRING_BULK' && plusActive ? '⭐ Gwalawala Plus · Service fee ₹0' : `Bulk service fee · ₹${bulkFee}`}</Text> : null}
+        <Text style={styles.totalLabel}>Products</Text>
+        <Text style={styles.total}>₹{total.toFixed(2)}</Text>
+      </View>
+      <View><Text style={styles.totalLabel}>Service fee</Text><Text style={styles.total}>{purchaseContext.customerType==='BUSINESS' && purchaseContext.orderType==='RECURRING_BULK' && plusActive ? '₹0' : purchaseContext.customerType==='BUSINESS' ? `₹${bulkFee}` : '₹0'}</Text></View>
+    </View>
+    <Pressable style={styles.button} disabled={loading || !selectedSlotId || dairywalaIds.length !== 1} onPress={placeOrder}>{loading ? <ActivityIndicator color="#fff"/> : <Text style={styles.buttonText}>Continue to payment</Text>}</Pressable>
   </ScrollView>;
 }
 
@@ -148,6 +165,6 @@ const styles = StyleSheet.create({
   eyebrow: { fontSize:12, fontWeight:'800', letterSpacing:1.5, color:'#777' }, title: { marginTop:9, fontSize:31, fontWeight:'800' }, body:{marginTop:12,color:'#666',fontSize:16,lineHeight:23},
   section:{marginTop:25,marginBottom:9,fontSize:18,fontWeight:'800'}, input:{height:52,borderWidth:1,borderColor:'#ddd',borderRadius:13,paddingHorizontal:15,fontSize:15,marginBottom:10},
   slotRow:{flexDirection:'row',gap:10,flexWrap:'wrap'}, slot:{paddingVertical:13,paddingHorizontal:18,borderRadius:13,borderWidth:1,borderColor:'#ddd'}, slotSelected:{backgroundColor:'#111',borderColor:'#111'}, slotText:{fontWeight:'700'}, slotSelectedText:{color:'#fff',fontWeight:'700'},
-  error:{marginTop:14,color:'#b00020',lineHeight:20}, summary:{marginTop:24,padding:18,borderWidth:1,borderColor:'#e5e5e5',borderRadius:15,flexDirection:'row',justifyContent:'space-between'}, summaryTitle:{fontWeight:'700'}, total:{fontSize:21,fontWeight:'800'},
+  error:{marginTop:14,color:'#b00020',lineHeight:20}, summary:{marginTop:24,padding:18,borderWidth:1,borderColor:'#e5e5e5',borderRadius:15,flexDirection:'row',justifyContent:'space-between',gap:20}, summaryTitle:{fontWeight:'700'}, totalLabel:{marginTop:8,color:'#777',fontSize:12}, total:{fontSize:21,fontWeight:'800'}, fee:{marginTop:7,color:'#555',fontSize:13},
   button:{marginTop:18,minHeight:54,borderRadius:14,alignItems:'center',justifyContent:'center',backgroundColor:'#111'}, buttonText:{color:'#fff',fontSize:16,fontWeight:'700'}
 });
