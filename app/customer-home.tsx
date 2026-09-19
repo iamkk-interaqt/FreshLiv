@@ -21,13 +21,7 @@ export default function CustomerHomeScreen() {
   }, [locality, postalCode]);
 
   function selectProduct(product: CatalogProduct) {
-    const isMilk = product.label.toLowerCase().includes('milk');
-    if (isMilk) return;
-    router.push({ pathname: '/discovery', params: { locality, postalCode, product: product.label } });
-  }
-
-  function selectMilkSource(source: string) {
-    router.push({ pathname: '/discovery', params: { locality, postalCode, product: 'milk', source } });
+    router.push({ pathname: '/purchase-intent', params: { locality, postalCode, product: product.label } });
   }
 
   const hasMilk = products.some((item) => item.label.toLowerCase().includes('milk'));
@@ -54,22 +48,7 @@ export default function CustomerHomeScreen() {
         </View>
       ) : null}
 
-      {hasMilk ? (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Milk source</Text>
-          <Text style={styles.sectionSubtitle}>Choose your preferred milk source.</Text>
-          <View style={styles.sourceRow}>
-            <Pressable style={styles.sourceCard} onPress={() => selectMilkSource('cow')}>
-              <Text style={styles.sourceEmoji}>🐄</Text>
-              <Text style={styles.sourceTitle}>Cow Milk</Text>
-            </Pressable>
-            <Pressable style={styles.sourceCard} onPress={() => selectMilkSource('buffalo')}>
-              <Text style={styles.sourceEmoji}>🐃</Text>
-              <Text style={styles.sourceTitle}>Buffalo Milk</Text>
-            </Pressable>
-          </View>
-        </View>
-      ) : null}
+
     </ScrollView>
   );
 }
