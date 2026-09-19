@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import type { CartItem } from './cart';
+import { getPurchaseContext } from './cart';
 
 export type CheckoutAddress = {
   label: string;
@@ -51,11 +52,16 @@ export async function createPendingOrder(
   if (!user) throw new Error('Please sign in before placing an order.');
   if (!items.length) throw new Error('Your cart is empty.');
 
+  const context = getPurchaseContext();
   const { data, error } = await supabase.rpc('create_customer_order', {
     p_dairywala_id: dairywalaId,
     p_address_id: addressId,
     p_delivery_slot_id: slotId,
     p_items: items.map((item) => ({ product_id: item.id, quantity: item.quantity })),
+    p_customer_type: context.customerType,
+    p_order_type: context.orderType,
+    p_purchase_category: context.category ?? null,
+    p_purchase_requirement: context.requirement ?? null,
   });
 
   if (error) throw error;
