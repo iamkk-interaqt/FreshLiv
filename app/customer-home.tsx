@@ -2,13 +2,26 @@ import { useEffect, useState } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { findAvailableCustomerProducts, type CatalogProduct } from '../src/services/catalog';
+import { supabase } from '../src/lib/supabase';
+import { useAuth } from '../src/auth/AuthProvider';
 
 export default function CustomerHomeScreen() {
   const router = useRouter();
+  const { user } = useAuth();
   const { locality = '', postalCode = '' } = useLocalSearchParams<{ locality?: string; postalCode?: string }>();
   const [products, setProducts] = useState<CatalogProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [plusActive, setPlusActive] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    if (user) {
+      supabase.from('business_subscriptions').select('status,expires_at').eq('customer_id', user.id).eq('status','ACTIVE').maybeSingle()
+        .then(({data}) => { if (mounted) setPlusActive(Boolean(data && (!data.expires_at || new Date(data.expires_at) > new Date()))); });
+    }
+    return () => { mounted = false; };
+  }, [user]);
 
   useEffect(() => {
     let mounted = true;
@@ -29,7 +42,7 @@ export default function CustomerHomeScreen() {
   return (
     <ScrollView style={styles.page} contentContainerStyle={styles.content}>
       <Text style={styles.eyebrow}>GWALAWALA</Text>
-      <Text style={styles.title}>What are you looking for?</Text>
+      <View style={styles.headingRow}><Text style={styles.title}>What are you looking for?</Text>{plusActive ? <Text style={styles.plusBadge}>⭐ Gwalawala Plus</Text> : null}</View>
       <Text style={styles.subtitle}>Only products currently listed by active Dairywalas serving your area are shown.</Text>
 
       {loading ? <View style={styles.center}><ActivityIndicator /><Text style={styles.muted}>Loading local products…</Text></View> : null}
@@ -61,6 +74,8 @@ const styles = StyleSheet.create({
   eyebrow: { fontSize: 12, fontWeight: '800', letterSpacing: 1.5, color: '#777' },
   title: { marginTop: 9, fontSize: 31, lineHeight: 38, fontWeight: '800' },
   subtitle: { marginTop: 9, fontSize: 15, lineHeight: 22, color: '#666' },
+  headingRow: { marginTop: 9, gap: 10 },
+  plusBadge: { alignSelf: 'flex-start', paddingHorizontal: 11, paddingVertical: 7, borderRadius: 999, backgroundColor: '#f3f3f3', fontSize: 12, fontWeight: '800' },
   grid: { marginTop: 24, flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   productCard: { width: '47%', minHeight: 112, padding: 18, borderRadius: 16, borderWidth: 1, borderColor: '#e5e5e5', justifyContent: 'center' },
   emoji: { fontSize: 31 },
