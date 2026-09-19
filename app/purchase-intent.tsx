@@ -36,10 +36,11 @@ export default function PurchaseIntentScreen(){
  const router=useRouter();
  const {product='',locality='',postalCode='',source=''}=useLocalSearchParams<{product?:string;locality?:string;postalCode?:string;source?:string}>();
  const category=keyFor(String(product)); const [customerType,setCustomerType]=useState<'HOME'|'BUSINESS'|null>(null);
- const [requirement,setRequirement]=useState(''); const [orderType,setOrderType]=useState<'STANDARD'|'ONE_TIME_BULK'|'RECURRING_BULK'|null>(null);
+ const [requirement,setRequirement]=useState(''); const [source,setSource]=useState(''); const [orderType,setOrderType]=useState<'STANDARD'|'ONE_TIME_BULK'|'RECURRING_BULK'|null>(null);
  const options=customerType==='HOME'?HOME_OPTIONS[category]??['Everyday Home Requirement']:customerType==='BUSINESS'?BUSINESS_OPTIONS[category]??['Regular Business Requirement']:[];
  function continueFlow(){
    if(!customerType||!requirement) return;
+   if(category==='MILK' && !source) return;
    if(customerType==='HOME'){
      setPurchaseContext({customerType:'HOME',orderType:'STANDARD',category,requirement});
      router.push({pathname:'/discovery',params:{locality,postalCode,product,source,customerType:'HOME',requirement}});
@@ -59,9 +60,15 @@ export default function PurchaseIntentScreen(){
    <Text style={styles.title}>Who are you buying for?</Text>
    <Text style={styles.subtitle}>We’ll tailor the buying experience to what you need.</Text>
    <View style={styles.row}>
-    <Choice title="🏠 Home" body="For your household" selected={customerType==='HOME'} onPress={()=>{setCustomerType('HOME');setRequirement('');setOrderType(null)}}/>
-    <Choice title="🏪 Business" body="Shop / Restaurant / Hotel" selected={customerType==='BUSINESS'} onPress={()=>{setCustomerType('BUSINESS');setRequirement('');setOrderType(null)}}/>
+    <Choice title="🏠 Home" body="For your household" selected={customerType==='HOME'} onPress={()=>{setCustomerType('HOME');setRequirement('');setSource('');setOrderType(null)}}/>
+    <Choice title="🏪 Business" body="Shop / Restaurant / Hotel" selected={customerType==='BUSINESS'} onPress={()=>{setCustomerType('BUSINESS');setRequirement('');setSource('');setOrderType(null)}}/>
    </View>
+   {customerType&&requirement&&category==='MILK'?<View style={styles.section}>
+    <Text style={styles.sectionTitle}>Choose your milk source</Text>
+    <View style={styles.options}>
+      {['Cow','Buffalo','Mixed'].map(o=><Pressable key={o} onPress={()=>setSource(o.toLowerCase())} style={[styles.option,source===o.toLowerCase()&&styles.selected]}><Text style={source===o.toLowerCase()?styles.selectedText:styles.optionText}>{o} Milk</Text></Pressable>)}
+    </View>
+   </View>:null}
    {customerType?<View style={styles.section}>
     <Text style={styles.sectionTitle}>{customerType==='HOME'?'What do you use it for?':'What is your business requirement?'}</Text>
     <View style={styles.options}>{options.map(o=><Pressable key={o} onPress={()=>setRequirement(o)} style={[styles.option,requirement===o&&styles.selected]}><Text style={requirement===o?styles.selectedText:styles.optionText}>{o}</Text></Pressable>)}</View>
