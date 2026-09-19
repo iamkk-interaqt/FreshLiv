@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { CFPaymentGatewayService } from 'react-native-cashfree-pg-sdk';
@@ -11,6 +11,26 @@ export default function GwalawalaPlusScreen(){
  const router=useRouter(); const {user}=useAuth();
  const params=useLocalSearchParams<{category?:string;requirement?:string;product?:string;source?:string;locality?:string;postalCode?:string}>();
  const [price,setPrice]=useState(499); const [active,setActive]=useState(false); const [loading,setLoading]=useState(true); const [paying,setPaying]=useState(false); const [error,setError]=useState('');
+ const pending=useRef<{subscriptionId:string;cashfreeOrderId:string}|null>(null);
+ useEffect(()=>{
+   CFPaymentGatewayService.setCallback({
+    onVerify: async (orderID:string)=>{
+      const p=pending.current; if(!p||p.cashfreeOrderId!==orderID)return;
+      try{
+       const verified=await supabase.functions.invoke('verify-gwalawala-plus-payment',{body:{subscriptionId:p.subscriptionId,cashfreeOrderId:p.cashfreeOrderId}});
+       if(verified.error) throw verified.error;
+       if(!verified.data?.success){setError('Payment is still being confirmed. Please check your Plus status again shortly.');return;}
+       setActive(true); setPurchaseContext({customerType:'BUSINESS',orderType:'RECURRING_BULK',category:params.category,requirement:params.requirement});
+       pending.current=null;
+       router.replace({pathname:'/discovery',params:{...params,customerType:'BUSINESS',orderType:'RECURRING_BULK'}});
+      }catch(e){setError(e instanceof Error?e.message:'Subscription payment verification failed.')}
+      finally{setPaying(false);}
+    },
+    onError: (_e:unknown,orderID:string)=>{if(pending.current?.cashfreeOrderId===orderID){pending.current=null;setError('Payment was not completed. You can try again.');setPaying(false);}}
+   });
+   return ()=>CFPaymentGatewayService.removeCallback();
+ },[router,params.category,params.requirement]);
+
  useEffect(()=>{(async()=>{if(!user){setLoading(false);return} try{
    const [{data:p},{data:s}]=await Promise.all([
     supabase.rpc('get_monetization_amount',{p_key:'business_monthly_price'}),
@@ -26,13 +46,8 @@ export default function GwalawalaPlusScreen(){
     if(e) throw e;
     if(!data?.paymentSessionId) throw new Error(data?.error||'Unable to start subscription payment.');
     const env=data.environment==='PRODUCTION'?CFEnvironment.PRODUCTION:CFEnvironment.SANDBOX;
+    pending.current={subscriptionId:data.subscriptionId,cashfreeOrderId:data.cashfreeOrderId};
     CFPaymentGatewayService.doWebPayment(new CFSession(data.paymentSessionId,data.cashfreeOrderId,env));
-    const verified=await supabase.functions.invoke('verify-gwalawala-plus-payment',{body:{subscriptionId:data.subscriptionId,cashfreeOrderId:data.cashfreeOrderId}});
-    if(verified.error) throw verified.error;
-    if(!verified.data?.success) throw new Error('Payment is still pending. Your Plus badge will appear after Cashfree confirms the payment.');
-    setActive(true);
-    setPurchaseContext({customerType:'BUSINESS',orderType:'RECURRING_BULK',category:params.category,requirement:params.requirement});
-    router.replace({pathname:'/discovery',params:{...params,customerType:'BUSINESS',orderType:'RECURRING_BULK'}});
    }catch(e){setError(e instanceof Error?e.message:'Subscription could not be completed.')}finally{setPaying(false)}
  }
  if(loading)return <View style={styles.center}><ActivityIndicator/><Text style={styles.muted}>Checking Gwalawala Plus…</Text></View>;
