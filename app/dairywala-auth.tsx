@@ -69,7 +69,7 @@ export default function SellerAuthScreen() {
         return;
       }
 
-      router.replace('/seller');
+      router.replace('/dairywala');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unable to verify OTP. Please try again.');
     } finally {
