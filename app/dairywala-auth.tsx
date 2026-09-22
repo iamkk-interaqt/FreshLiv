@@ -10,7 +10,7 @@ function normalizeIndianPhone(value: string) {
   return '';
 }
 
-export default function DairywalaAuthScreen() {
+export default function SellerAuthScreen() {
   const router = useRouter();
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
@@ -69,7 +69,7 @@ export default function DairywalaAuthScreen() {
         return;
       }
 
-      router.replace('/dairywala');
+      router.replace('/seller');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unable to verify OTP. Please try again.');
     } finally {
@@ -80,9 +80,9 @@ export default function DairywalaAuthScreen() {
   return (
     <View style={styles.container}>
       <Pressable onPress={() => router.back()}><Text style={styles.back}>← Back</Text></Pressable>
-      <Text style={styles.eyebrow}>DAIRYWALA / BUSINESS</Text>
+      <Text style={styles.eyebrow}>SELLER / BUSINESS</Text>
       <Text style={styles.title}>{sent ? 'Enter your OTP' : 'Sign in or register'}</Text>
-      <Text style={styles.body}>{sent ? 'Verify the mobile number you will use to manage your dairy business.' : 'Use the business owner mobile number. New Dairywalas can complete registration after sign in.'}</Text>
+      <Text style={styles.body}>{sent ? 'Verify the mobile number you will use to manage your dairy business.' : 'Use the business owner mobile number. New Sellers can complete registration after sign in.'}</Text>
       <TextInput style={styles.input} placeholder="Mobile number" keyboardType="phone-pad" value={phone} onChangeText={setPhone} editable={!sent} autoComplete="tel" />
       {sent ? <TextInput style={styles.input} placeholder="6-digit OTP" keyboardType="number-pad" value={otp} onChangeText={setOtp} maxLength={6} autoComplete="one-time-code" /> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
