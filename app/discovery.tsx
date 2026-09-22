@@ -15,6 +15,8 @@ export default function DiscoveryScreen() {
     usage = '',
     variant = '',
     breed = '',
+    orderType = '',
+    bulkOnly = '',
   } = useLocalSearchParams<{ locality?: string; postalCode?: string; product?: string; source?: string }>();
   const [loading, setLoading] = useState(true);
   const [dairywalas, setDairywalas] = useState<DairywalaSummary[]>([]);
@@ -31,6 +33,7 @@ export default function DiscoveryScreen() {
       String(source),
       String(variant),
       String(breed),
+      String(bulkOnly).toLowerCase() === 'true' || String(orderType).toUpperCase() !== 'STANDARD' && Boolean(orderType),
     )
       .then((results) => {
         if (mounted) setDairywalas(results);
@@ -42,7 +45,7 @@ export default function DiscoveryScreen() {
         if (mounted) setLoading(false);
       });
     return () => { mounted = false; };
-  }, [locality, postalCode, product, source]);
+  }, [locality, postalCode, product, productCategory, source, usage, variant, breed, orderType, bulkOnly]);
 
   const discoveryLabel = [source, product].filter(Boolean).join(' ');
 
@@ -62,7 +65,7 @@ export default function DiscoveryScreen() {
           <Text style={styles.emptyBody}>{error}</Text>
           <Pressable
             style={styles.button}
-            onPress={() => router.replace({ pathname: '/discovery', params: { locality, postalCode, product, productCategory, source, usage, variant, breed } })}
+            onPress={() => router.replace({ pathname: '/discovery', params: { locality, postalCode, product, productCategory, source, usage, variant, breed, orderType, bulkOnly } })}
           >
             <Text style={styles.buttonText}>Try again</Text>
           </Pressable>
