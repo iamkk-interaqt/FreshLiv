@@ -30,7 +30,7 @@ export default function PurchaseIntentScreen(){
  const category=String(productCategory||keyFor(String(product))).toUpperCase(); const [customerType,setCustomerType]=useState<'HOME'|'BUSINESS'|null>(null);
  const [requirement,setRequirement]=useState(''); const [source,setSource]=useState(''); const [orderType,setOrderType]=useState<'STANDARD'|'ONE_TIME_BULK'|'RECURRING_BULK'|null>(null);
  const options=customerType==='HOME'?HOME_OPTIONS[category]??['Everyday Home Requirement']:[];
- function continueFlow(){
+ async function continueFlow(){
    if(!customerType) return;
    if(customerType==='BUSINESS'){
      if(!orderType) return;

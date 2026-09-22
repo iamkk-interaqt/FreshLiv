@@ -1,5 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ActivityIndicator, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { supabase } from '../src/lib/supabase';
 import { clearCart } from '../src/services/cart';
 
@@ -7,8 +8,10 @@ const TEST_UPI_ID = '7978388706@upi';
 
 export default function TestUpiPaymentScreen() {
   const router = useRouter();
-  const { orderId = '', amount = '' } = useLocalSearchParams<{ orderId?: string; amount?: string }>();
-  const value = Number(amount || 0);
+  const { orderId = '' } = useLocalSearchParams<{ orderId?: string }>();
+  const [value, setValue] = useState(0);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => { let mounted = true; supabase.from('orders').select('total_amount,status').eq('id',String(orderId)).maybeSingle().then(({data,error}) => { if (!mounted) return; if (error) alert(error.message); setValue(Number(data?.total_amount || 0)); setLoading(false); }); return () => { mounted = false; }; }, [orderId]);
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=700x700&data=${encodeURIComponent(`upi://pay?pa=${TEST_UPI_ID}&pn=FreshLiv&am=${value.toFixed(2)}&cu=INR`)}`;
 
   async function markPaid() {
@@ -26,15 +29,14 @@ export default function TestUpiPaymentScreen() {
   return <ScrollView contentContainerStyle={styles.container}>
     <Text style={styles.eyebrow}>TEST PAYMENT</Text>
     <Text style={styles.title}>Pay with UPI</Text>
-    <Text style={styles.body}>Testing mode only. Scan this QR using any UPI app.</Text>
+    <Text style={styles.body}>Testing mode only. Scan this QR using any UPI app.</Text>{loading ? <Text style={styles.note}>Loading order amount…</Text> : null}
     <View style={styles.amount}><Text style={styles.amountLabel}>Amount to pay</Text><Text style={styles.amountValue}>₹{value.toFixed(2)}</Text></View>
     <View style={styles.qrCard}><Image source={{ uri: qrUrl }} style={styles.qr} /></View>
     <Text style={styles.upi}>{TEST_UPI_ID}</Text>
-    <Pressable style={styles.button} onPress={() => Linking.openURL(qrUrl)}><Text style={styles.buttonText}>Open / Save QR</Text></Pressable>
+    <Pressable style={styles.button} onPress={() => Linking.openURL(qrUrl)}><Text style={styles.buttonText}>Open QR</Text></Pressable>
     <Pressable style={styles.secondary} onPress={() => Linking.openURL(`upi://pay?pa=${TEST_UPI_ID}&pn=FreshLiv&am=${value.toFixed(2)}&cu=INR`)}><Text style={styles.secondaryText}>Open UPI App</Text></Pressable>
     <Text style={styles.note}>After completing the test payment, use the button below to confirm the test order.</Text>
     <Pressable style={styles.confirm} onPress={markPaid}><Text style={styles.confirmText}>I Have Paid — Test Confirmation</Text></Pressable>
-    <ActivityIndicator style={styles.hidden} />
   </ScrollView>;
 }
 const styles=StyleSheet.create({
