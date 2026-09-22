@@ -3,55 +3,17 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 export default function CustomerScreen() {
   const router = useRouter();
-
-  return (
-    <View style={styles.container}>
-      <Text style={styles.eyebrow}>CUSTOMER</Text>
-      <Text style={styles.title}>What would you like to order?</Text>
-      <Text style={styles.body}>
-        Choose a category first. You can browse real local sellers and products after setting your location.
-      </Text>
-
-      <Pressable style={styles.card} onPress={() => router.push('/location?vertical=DAIRY')}>
-        <Text style={styles.icon}>🥛</Text>
-        <View style={styles.copy}>
-          <Text style={styles.cardTitle}>Dairy Products</Text>
-          <Text style={styles.cardBody}>Milk, paneer, curd, butter, ghee & more</Text>
-        </View>
-        <Text style={styles.arrow}>›</Text>
-      </Pressable>
-
-      <Pressable style={styles.card} onPress={() => router.push('/location?vertical=MEAT')}>
-        <Text style={styles.icon}>🍗</Text>
-        <View style={styles.copy}>
-          <Text style={styles.cardTitle}>Meat & Eggs</Text>
-          <Text style={styles.cardBody}>Chicken, mutton, fish & eggs</Text>
-        </View>
-        <Text style={styles.arrow}>›</Text>
-      </Pressable>
-
-      <View style={styles.emptyState}>
-        <Text style={styles.emptyTitle}>Fresh local supply</Text>
-        <Text style={styles.emptyBody}>
-          We show only products actually listed by active local businesses serving your area. No fake marketplace inventory is preloaded.
-        </Text>
-      </View>
-    </View>
-  );
+  return <View style={styles.container}>
+    <Text style={styles.eyebrow}>CUSTOMER</Text>
+    <Text style={styles.title}>What would you like to order?</Text>
+    <Text style={styles.body}>Choose a category first. You can browse real local sellers and products after setting your location.</Text>
+    <Pressable style={styles.card} onPress={()=>router.push('/location?vertical=DAIRY')}>
+      <Text style={styles.icon}>🥛</Text><View style={styles.copy}><Text style={styles.cardTitle}>Dairy Products</Text><Text style={styles.cardBody}>Milk, paneer, curd, butter, ghee & more</Text></View><Text style={styles.arrow}>›</Text>
+    </Pressable>
+    <Pressable style={styles.card} onPress={()=>router.push('/meat-location')}>
+      <Text style={styles.icon}>🍗</Text><View style={styles.copy}><Text style={styles.cardTitle}>Meat & Eggs</Text><Text style={styles.cardBody}>Chicken, mutton, fish & eggs</Text></View><Text style={styles.arrow}>›</Text>
+    </Pressable>
+    <View style={styles.emptyState}><Text style={styles.emptyTitle}>Fresh local supply</Text><Text style={styles.emptyBody}>We show only products actually listed by active local businesses serving your area. No fake marketplace inventory is preloaded.</Text></View>
+  </View>;
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, paddingTop: 68, backgroundColor: '#fff' },
-  eyebrow: { fontSize: 12, fontWeight: '800', letterSpacing: 1.5, color: '#777' },
-  title: { marginTop: 10, fontSize: 32, lineHeight: 38, fontWeight: '800' },
-  body: { marginTop: 12, fontSize: 16, lineHeight: 24, color: '#666' },
-  card: { marginTop: 18, minHeight: 104, padding: 18, borderRadius: 18, borderWidth: 1, borderColor: '#e5e5e5', flexDirection: 'row', alignItems: 'center' },
-  icon: { fontSize: 38, marginRight: 15 },
-  copy: { flex: 1 },
-  cardTitle: { fontSize: 18, fontWeight: '800' },
-  cardBody: { marginTop: 5, color: '#777', lineHeight: 20 },
-  arrow: { fontSize: 30, color: '#777', marginLeft: 8 },
-  emptyState: { marginTop: 28, padding: 20, borderRadius: 16, borderWidth: 1, borderColor: '#e5e5e5' },
-  emptyTitle: { fontSize: 17, fontWeight: '800' },
-  emptyBody: { marginTop: 7, fontSize: 14, lineHeight: 21, color: '#777' }
-});
+const styles=StyleSheet.create({container:{flex:1,padding:24,paddingTop:68,backgroundColor:'#fff'},eyebrow:{fontSize:12,fontWeight:'800',letterSpacing:1.5,color:'#777'},title:{marginTop:10,fontSize:32,lineHeight:38,fontWeight:'800'},body:{marginTop:12,fontSize:16,lineHeight:24,color:'#666'},card:{marginTop:18,minHeight:104,padding:18,borderRadius:18,borderWidth:1,borderColor:'#e5e5e5',flexDirection:'row',alignItems:'center'},icon:{fontSize:38,marginRight:15},copy:{flex:1},cardTitle:{fontSize:18,fontWeight:'800'},cardBody:{marginTop:5,color:'#777',lineHeight:20},arrow:{fontSize:30,color:'#777',marginLeft:8},emptyState:{marginTop:28,padding:20,borderRadius:16,borderWidth:1,borderColor:'#e5e5e5'},emptyTitle:{fontSize:17,fontWeight:'800'},emptyBody:{marginTop:7,fontSize:14,lineHeight:21,color:'#777'}});
