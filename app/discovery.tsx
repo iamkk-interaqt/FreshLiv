@@ -10,7 +10,11 @@ export default function DiscoveryScreen() {
     locality = '',
     postalCode = '',
     product = '',
+    productCategory = '',
     source = '',
+    usage = '',
+    variant = '',
+    breed = '',
   } = useLocalSearchParams<{ locality?: string; postalCode?: string; product?: string; source?: string }>();
   const [loading, setLoading] = useState(true);
   const [dairywalas, setDairywalas] = useState<DairywalaSummary[]>([]);
@@ -22,8 +26,11 @@ export default function DiscoveryScreen() {
     setError('');
     findActiveDairywalas(
       { locality: String(locality), postalCode: String(postalCode) },
-      String(product),
+      String(productCategory || product),
+      String(usage),
       String(source),
+      String(variant),
+      String(breed),
     )
       .then((results) => {
         if (mounted) setDairywalas(results);
@@ -41,13 +48,13 @@ export default function DiscoveryScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.eyebrow}>DAIRYWALAS NEAR YOU</Text>
+      <Text style={styles.eyebrow}>LOCAL SELLERS NEAR YOU</Text>
       <Text style={styles.title}>{discoveryLabel || locality || postalCode || 'Your area'}</Text>
 
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator />
-          <Text style={styles.muted}>Checking available Dairywalas…</Text>
+          <Text style={styles.muted}>Checking available local sellers…</Text>
         </View>
       ) : error ? (
         <View style={styles.emptyState}>
@@ -55,16 +62,16 @@ export default function DiscoveryScreen() {
           <Text style={styles.emptyBody}>{error}</Text>
           <Pressable
             style={styles.button}
-            onPress={() => router.replace({ pathname: '/discovery', params: { locality, postalCode, product, source } })}
+            onPress={() => router.replace({ pathname: '/discovery', params: { locality, postalCode, product, productCategory, source, usage, variant, breed } })}
           >
             <Text style={styles.buttonText}>Try again</Text>
           </Pressable>
         </View>
       ) : dairywalas.length === 0 ? (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyTitle}>No Dairywalas available here yet</Text>
+          <Text style={styles.emptyTitle}>No local sellers available here yet</Text>
           <Text style={styles.emptyBody}>
-            We do not have an active Dairywala serving this area with the selected product yet. You can refer your local Dairywala to Gwalawala.
+            We do not have an active local seller serving this area with the selected product yet. You can refer a local business to FreshLiv.
           </Text>
           <Pressable style={styles.button} onPress={() => router.push('/customer')}>
             <Text style={styles.buttonText}>Change location</Text>

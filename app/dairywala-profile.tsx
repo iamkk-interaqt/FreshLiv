@@ -4,7 +4,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { supabase } from '../src/lib/supabase';
 import { findActiveProducts, type CustomerProduct } from '../src/services/products';
 
-export default function DairywalaProfileScreen() {
+export default function SellerProfileScreen() {
   const router = useRouter();
   const { id = '' } = useLocalSearchParams<{ id?: string }>();
   const [loading, setLoading] = useState(true);
@@ -24,28 +24,28 @@ export default function DairywalaProfileScreen() {
           findActiveProducts(dairywalaId),
         ]);
         if (profileError) throw profileError;
-        if (!profile) throw new Error('This Dairywala is no longer available.');
+        if (!profile) throw new Error('This Seller is no longer available.');
         if (mounted) { setBusinessName(profile.business_name); setLocality(profile.locality ?? ''); setProducts(productRows); }
       } catch (loadError) {
-        if (mounted) setError(loadError instanceof Error ? loadError.message : 'Unable to load this Dairywala.');
+        if (mounted) setError(loadError instanceof Error ? loadError.message : 'Unable to load this Seller.');
       } finally { if (mounted) setLoading(false); }
     }
     load();
     return () => { mounted = false; };
   }, [id]);
 
-  if (loading) return <View style={styles.center}><ActivityIndicator /><Text style={styles.muted}>Loading Dairywala…</Text></View>;
-  if (error) return <View style={styles.container}><Text style={styles.eyebrow}>DAIRYWALA</Text><Text style={styles.title}>Unavailable</Text><Text style={styles.body}>{error}</Text><Pressable style={styles.button} onPress={() => router.back()}><Text style={styles.buttonText}>Go back</Text></Pressable></View>;
+  if (loading) return <View style={styles.center}><ActivityIndicator /><Text style={styles.muted}>Loading Seller…</Text></View>;
+  if (error) return <View style={styles.container}><Text style={styles.eyebrow}>SELLER</Text><Text style={styles.title}>Unavailable</Text><Text style={styles.body}>{error}</Text><Pressable style={styles.button} onPress={() => router.back()}><Text style={styles.buttonText}>Go back</Text></Pressable></View>;
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Pressable onPress={() => router.back()}><Text style={styles.back}>← Back</Text></Pressable>
-      <Text style={styles.eyebrow}>DAIRYWALA</Text>
+      <Text style={styles.eyebrow}>SELLER</Text>
       <Text style={styles.title}>{businessName}</Text>
       {locality ? <Text style={styles.location}>{locality}</Text> : null}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Available products</Text>
-        {products.length === 0 ? <View style={styles.emptyState}><Text style={styles.emptyTitle}>No products available yet</Text><Text style={styles.emptyBody}>This Dairywala is active, but no active products are currently listed.</Text></View> : products.map((product) => (
+        {products.length === 0 ? <View style={styles.emptyState}><Text style={styles.emptyTitle}>No products available yet</Text><Text style={styles.emptyBody}>This Seller is active, but no active products are currently listed.</Text></View> : products.map((product) => (
           <Pressable key={product.id} style={styles.productCard} onPress={() => router.push({ pathname: '/product', params: { id: product.id } })}>
             <View style={styles.productInfo}>
               <Text style={styles.productName}>{product.name}</Text>

@@ -54,7 +54,7 @@ function matchesProduct(
 ) {
   const category = upper(product.product_category);
   const requested = upper(requestedCategory);
-  const usage = upper(requestedUsage);
+  const usage = upper(requestedUsage).replace(/\s+/g, '_');
   const source = upper(requestedSource);
   const variant = upper(requestedVariant);
   const breed = normalize(requestedBreed);
@@ -179,7 +179,7 @@ export async function findMatchingProducts(
       name: p.name ?? '',
       description: p.description,
       productCategory: p.product_category,
-      productVariant: (upper(p.product_variant) || null) as 'ORIGINAL' | 'MIXED' | null,
+      productVariant: upper(p.product_variant) || null,
       productType: p.product_type,
       usageTypes: p.usage_types ?? [],
       milkBreed: p.milk_breed,

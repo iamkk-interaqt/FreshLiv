@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { advanceDairywalaOrder, getDairywalaOrders, type OrderRow } from '../src/services/orderManagement';
+import { advanceSellerOrder, getSellerOrders, type OrderRow } from '../src/services/orderManagement';
 
 const ACTION_LABEL: Record<string, string> = {
   CONFIRMED: 'Accept order',
@@ -11,7 +11,7 @@ const ACTION_LABEL: Record<string, string> = {
   DELIVERED: 'Complete order',
 };
 
-export default function DairywalaOrdersScreen() {
+export default function SellerOrdersScreen() {
   const router = useRouter();
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,7 +22,7 @@ export default function DairywalaOrdersScreen() {
   const load = useCallback(async () => {
     try {
       setError('');
-      setOrders(await getDairywalaOrders());
+      setOrders(await getSellerOrders());
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load orders.');
     } finally {
@@ -36,7 +36,7 @@ export default function DairywalaOrdersScreen() {
   async function advance(order: OrderRow) {
     try {
       setBusyId(order.id);
-      await advanceDairywalaOrder(order);
+      await advanceSellerOrder(order);
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not update the order.');
@@ -49,7 +49,7 @@ export default function DairywalaOrdersScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.eyebrow}>DAIRYWALA</Text>
+          <Text style={styles.eyebrow}>SELLER</Text>
           <Text style={styles.title}>Orders</Text>
         </View>
         <Pressable onPress={() => router.back()}><Text style={styles.back}>Back</Text></Pressable>

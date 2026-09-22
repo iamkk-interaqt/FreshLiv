@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Gwalawala",
+    "name": "FreshLiv",
     "slug": "gwalawala",
     "version": "0.1.0",
     "orientation": "portrait",
@@ -8,30 +8,10 @@
     "scheme": "gwalawala",
     "plugins": [
       "expo-router",
-      [
-        "expo-notifications",
-        {
-          "defaultChannel": "orders"
-        }
-      ]
+      ["expo-notifications", {"defaultChannel": "orders"}]
     ],
-    "android": {
-      "package": "com.gwalawala.app"
-    },
-    "ios": {
-      "bundleIdentifier": "com.gwalawala.app",
-      "infoPlist": {
-        "LSApplicationQueriesSchemes": [
-          "phonepe",
-          "tez",
-          "paytmmp",
-          "bhim",
-          "amazonpay",
-          "credpay",
-          "upi"
-        ]
-      }
-    },
-    "experiments": { "typedRoutes": true }
+    "android": {"package": "com.gwalawala.app"},
+    "ios": {"bundleIdentifier": "com.gwalawala.app", "infoPlist": {"LSApplicationQueriesSchemes": ["phonepe","tez","paytmmp","bhim","amazonpay","credpay","upi"]}},
+    "experiments": {"typedRoutes": true}
   }
 }
