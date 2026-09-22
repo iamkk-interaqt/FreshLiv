@@ -24,7 +24,7 @@ export type DairywalaProductMatch = {
   name: string;
   description: string | null;
   productCategory: string | null;
-  productVariant: 'ORIGINAL' | 'MIXED' | null;
+  productVariant: string | null;
   productType: string | null;
   usageTypes: string[];
   milkBreed: string | null;
