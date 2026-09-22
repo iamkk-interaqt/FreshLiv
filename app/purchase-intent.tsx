@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { setPurchaseContext } from '../src/services/cart';
+import { supabase } from '../src/lib/supabase';
 
 const HOME_OPTIONS: Record<string,string[]> = {
   MILK: ['Everyday Drinking','Tea','Coffee','Cooking','Paneer / Curd Making','Rich Milk Preference'],
@@ -34,7 +35,14 @@ export default function PurchaseIntentScreen(){
    if(customerType==='BUSINESS'){
      if(!orderType) return;
      setPurchaseContext({customerType:'BUSINESS',orderType,category,requirement:'Bulk Order'});
-     if(orderType==='RECURRING_BULK') router.push({pathname:'/gwalawala-plus',params:{locality,postalCode,product,source,category,requirement:'Recurring Bulk Supply'}});
+     if(orderType==='RECURRING_BULK'){
+      const {data:{user}}=await supabase.auth.getUser();
+      if(!user){ router.push('/customer-auth'); return; }
+      const {data:plus}=await supabase.from('business_subscriptions').select('status,expires_at').eq('customer_id',user.id).eq('status','ACTIVE').maybeSingle();
+      const active=Boolean(plus&&(!plus.expires_at||new Date(plus.expires_at)>new Date()));
+      if(active) router.push({pathname:'/discovery',params:{locality,postalCode,product,productCategory:category,source,customerType:'BUSINESS',usage:'SHOP',requirement:'Recurring Bulk Supply',orderType:'RECURRING_BULK',bulkOnly:'true'}});
+      else router.push({pathname:'/gwalawala-plus',params:{locality,postalCode,product,source,category,requirement:'Recurring Bulk Supply'}});
+    }
      else router.push({pathname:'/discovery',params:{locality,postalCode,product,productCategory:category,source,customerType:'BUSINESS',requirement:'One-Time Bulk Order',orderType,bulkOnly:'true'}});
      return;
    }
