@@ -15,13 +15,13 @@ export default function SellerProfileScreen() {
 
   useEffect(() => {
     let mounted = true;
-    const sellerId = String(id);
+    const dairywalaId = String(id);
     async function load() {
       setLoading(true); setError('');
       try {
         const [{ data: profile, error: profileError }, productRows] = await Promise.all([
-          supabase.from('seller_profiles').select('business_name, locality').eq('id', sellerId).eq('status', 'ACTIVE').maybeSingle(),
-          findActiveProducts(sellerId),
+          supabase.from('dairywala_profiles').select('business_name, locality').eq('id', dairywalaId).eq('status', 'ACTIVE').maybeSingle(),
+          findActiveProducts(dairywalaId),
         ]);
         if (profileError) throw profileError;
         if (!profile) throw new Error('This Seller is no longer available.');
