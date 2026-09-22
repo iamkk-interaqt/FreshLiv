@@ -17,7 +17,7 @@ export default function DiscoveryScreen() {
     breed = '',
     orderType = '',
     bulkOnly = '',
-  } = useLocalSearchParams<{ locality?: string; postalCode?: string; product?: string; source?: string }>();
+  } = useLocalSearchParams<{ locality?: string; postalCode?: string; product?: string; productCategory?: string; source?: string; usage?: string; variant?: string; breed?: string; orderType?: string; bulkOnly?: string }>();
   const [loading, setLoading] = useState(true);
   const [dairywalas, setDairywalas] = useState<DairywalaSummary[]>([]);
   const [error, setError] = useState('');
