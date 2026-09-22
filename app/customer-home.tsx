@@ -41,13 +41,13 @@ export default function CustomerHomeScreen() {
 
   return (
     <ScrollView style={styles.page} contentContainerStyle={styles.content}>
-      <Text style={styles.eyebrow}>GWALAWALA</Text>
-      <View style={styles.headingRow}><Text style={styles.title}>What are you looking for?</Text>{plusActive ? <Text style={styles.plusBadge}>⭐ Gwalawala Plus</Text> : null}</View>
-      <Text style={styles.subtitle}>Only products currently listed by active Dairywalas serving your area are shown.</Text>
+      <Text style={styles.eyebrow}>FRESHLIV</Text>
+      <View style={styles.headingRow}><Text style={styles.title}>What are you looking for?</Text>{plusActive ? <Text style={styles.plusBadge}>⭐ FreshLiv Plus</Text> : null}</View>
+      <Text style={styles.subtitle}>Only products currently listed by active local businesses serving your area are shown.</Text>
 
       {loading ? <View style={styles.center}><ActivityIndicator /><Text style={styles.muted}>Loading local products…</Text></View> : null}
       {error ? <View style={styles.error}><Text style={styles.errorText}>{error}</Text></View> : null}
-      {!loading && !error && !products.length ? <View style={styles.empty}><Text style={styles.emptyTitle}>No products available yet</Text><Text style={styles.emptyBody}>There are no active products from Dairywalas serving this location yet.</Text></View> : null}
+      {!loading && !error && !products.length ? <View style={styles.empty}><Text style={styles.emptyTitle}>No products available yet</Text><Text style={styles.emptyBody}>There are no active products from local businesses serving this location yet.</Text></View> : null}
 
       {!loading && !error && products.length ? (
         <View style={styles.grid}>
