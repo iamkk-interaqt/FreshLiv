@@ -34,7 +34,7 @@ function keyFor(value:string) {
 
 export default function PurchaseIntentScreen(){
  const router=useRouter();
- const {product='',productCategory='',locality='',postalCode='',sourceParam=''}=useLocalSearchParams<{product?:string;locality?:string;postalCode?:string;source?:string}>();
+ const {product='',productCategory='',locality='',postalCode='',sourceParam=''}=useLocalSearchParams<{product?:string;locality?:string;postalCode?:string;sourceParam?:string}>();
  const category=String(productCategory||keyFor(String(product))).toUpperCase(); const [customerType,setCustomerType]=useState<'HOME'|'BUSINESS'|null>(null);
  const [requirement,setRequirement]=useState(''); const [source,setSource]=useState(''); const [orderType,setOrderType]=useState<'STANDARD'|'ONE_TIME_BULK'|'RECURRING_BULK'|null>(null);
  const options=customerType==='HOME'?HOME_OPTIONS[category]??['Everyday Home Requirement']:customerType==='BUSINESS'?BUSINESS_OPTIONS[category]??['Regular Business Requirement']:[];
