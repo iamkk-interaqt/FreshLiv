@@ -34,7 +34,7 @@ function keyFor(value:string) {
 
 export default function PurchaseIntentScreen(){
  const router=useRouter();
- const {product='',productCategory='',locality='',postalCode='',source=''}=useLocalSearchParams<{product?:string;locality?:string;postalCode?:string;source?:string}>();
+ const {product='',productCategory='',locality='',postalCode='',sourceParam=''}=useLocalSearchParams<{product?:string;locality?:string;postalCode?:string;source?:string}>();
  const category=String(productCategory||keyFor(String(product))).toUpperCase(); const [customerType,setCustomerType]=useState<'HOME'|'BUSINESS'|null>(null);
  const [requirement,setRequirement]=useState(''); const [source,setSource]=useState(''); const [orderType,setOrderType]=useState<'STANDARD'|'ONE_TIME_BULK'|'RECURRING_BULK'|null>(null);
  const options=customerType==='HOME'?HOME_OPTIONS[category]??['Everyday Home Requirement']:customerType==='BUSINESS'?BUSINESS_OPTIONS[category]??['Regular Business Requirement']:[];
@@ -43,16 +43,16 @@ export default function PurchaseIntentScreen(){
    if(category==='MILK' && !source) return;
    if(customerType==='HOME'){
      setPurchaseContext({customerType:'HOME',orderType:'STANDARD',category,requirement});
-     router.push({pathname:'/discovery',params:{locality,postalCode,product,productCategory:category,source,customerType:'HOME',requirement}});
+     router.push({pathname:'/discovery',params:{locality,postalCode,product,productCategory:category,source:sourceParam,customerType:'HOME',requirement}});
      return;
    }
    if(!orderType) return;
    if(orderType==='RECURRING_BULK'){
-     router.push({pathname:'/gwalawala-plus',params:{locality,postalCode,product,source,category,requirement}});
+     router.push({pathname:'/gwalawala-plus',params:{locality,postalCode,product,source:sourceParam,category,requirement}});
      return;
    }
    setPurchaseContext({customerType:'BUSINESS',orderType,category,requirement});
-   router.push({pathname:'/discovery',params:{locality,postalCode,product,productCategory:category,source,customerType:'BUSINESS',requirement,orderType}});
+   router.push({pathname:'/discovery',params:{locality,postalCode,product,productCategory:category,source:sourceParam,customerType:'BUSINESS',requirement,orderType}});
  }
  return <ScrollView contentContainerStyle={styles.container}>
    <Pressable onPress={()=>router.back()}><Text style={styles.back}>← Back</Text></Pressable>
