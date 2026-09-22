@@ -54,7 +54,7 @@ function matchesProduct(
 ) {
   const category = upper(product.product_category);
   const requested = upper(requestedCategory);
-  const usage = upper(requestedUsage);
+  const usage = upper(requestedUsage).replace(/\s+/g, '_');
   const source = upper(requestedSource);
   const variant = upper(requestedVariant);
   const breed = normalize(requestedBreed);
