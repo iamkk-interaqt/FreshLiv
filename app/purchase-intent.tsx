@@ -34,8 +34,8 @@ function keyFor(value:string) {
 
 export default function PurchaseIntentScreen(){
  const router=useRouter();
- const {product='',locality='',postalCode='',source=''}=useLocalSearchParams<{product?:string;locality?:string;postalCode?:string;source?:string}>();
- const category=keyFor(String(product)); const [customerType,setCustomerType]=useState<'HOME'|'BUSINESS'|null>(null);
+ const {product='',productCategory='',locality='',postalCode='',source=''}=useLocalSearchParams<{product?:string;locality?:string;postalCode?:string;source?:string}>();
+ const category=String(productCategory||keyFor(String(product))).toUpperCase(); const [customerType,setCustomerType]=useState<'HOME'|'BUSINESS'|null>(null);
  const [requirement,setRequirement]=useState(''); const [source,setSource]=useState(''); const [orderType,setOrderType]=useState<'STANDARD'|'ONE_TIME_BULK'|'RECURRING_BULK'|null>(null);
  const options=customerType==='HOME'?HOME_OPTIONS[category]??['Everyday Home Requirement']:customerType==='BUSINESS'?BUSINESS_OPTIONS[category]??['Regular Business Requirement']:[];
  function continueFlow(){
@@ -43,7 +43,7 @@ export default function PurchaseIntentScreen(){
    if(category==='MILK' && !source) return;
    if(customerType==='HOME'){
      setPurchaseContext({customerType:'HOME',orderType:'STANDARD',category,requirement});
-     router.push({pathname:'/discovery',params:{locality,postalCode,product,source,customerType:'HOME',requirement}});
+     router.push({pathname:'/discovery',params:{locality,postalCode,product,productCategory:category,source,customerType:'HOME',requirement}});
      return;
    }
    if(!orderType) return;
@@ -52,7 +52,7 @@ export default function PurchaseIntentScreen(){
      return;
    }
    setPurchaseContext({customerType:'BUSINESS',orderType,category,requirement});
-   router.push({pathname:'/discovery',params:{locality,postalCode,product,source,customerType:'BUSINESS',requirement,orderType}});
+   router.push({pathname:'/discovery',params:{locality,postalCode,product,productCategory:category,source,customerType:'BUSINESS',requirement,orderType}});
  }
  return <ScrollView contentContainerStyle={styles.container}>
    <Pressable onPress={()=>router.back()}><Text style={styles.back}>← Back</Text></Pressable>
@@ -76,9 +76,9 @@ export default function PurchaseIntentScreen(){
    {customerType==='BUSINESS'&&requirement?<View style={styles.section}>
      <Text style={styles.sectionTitle}>How do you want to buy?</Text>
      <Pressable style={[styles.orderCard,orderType==='ONE_TIME_BULK'&&styles.selected]} onPress={()=>setOrderType('ONE_TIME_BULK')}><Text style={styles.orderTitle}>One-Time Bulk Order</Text><Text style={styles.orderBody}>₹99 bulk order service fee</Text></Pressable>
-     <Pressable style={[styles.orderCard,orderType==='RECURRING_BULK'&&styles.selected]} onPress={()=>setOrderType('RECURRING_BULK')}><View style={styles.plusRow}><Text style={styles.orderTitle}>Daily / Regular Bulk</Text><Text style={styles.plusPill}>⭐ Plus</Text></View><Text style={styles.orderBody}>Gwalawala Business · ₹499/month</Text><Text style={styles.link}>See benefits</Text></Pressable>
+     <Pressable style={[styles.orderCard,orderType==='RECURRING_BULK'&&styles.selected]} onPress={()=>setOrderType('RECURRING_BULK')}><View style={styles.plusRow}><Text style={styles.orderTitle}>Daily / Regular Bulk</Text><Text style={styles.plusPill}>⭐ Plus</Text></View><Text style={styles.orderBody}>FreshLiv Business · ₹499/month</Text><Text style={styles.link}>See benefits</Text></Pressable>
    </View>:null}
-   {customerType&&requirement&&(customerType==='HOME'||orderType)?<Pressable style={styles.button} onPress={continueFlow}><Text style={styles.buttonText}>{customerType==='BUSINESS'&&orderType==='RECURRING_BULK'?'Continue to Gwalawala Plus':'Continue'}</Text></Pressable>:null}
+   {customerType&&requirement&&(customerType==='HOME'||orderType)?<Pressable style={styles.button} onPress={continueFlow}><Text style={styles.buttonText}>{customerType==='BUSINESS'&&orderType==='RECURRING_BULK'?'Continue to FreshLiv Plus':'Continue'}</Text></Pressable>:null}
  </ScrollView>;
 }
 function Choice({title,body,selected,onPress}:{title:string;body:string;selected:boolean;onPress:()=>void}){return <Pressable onPress={onPress} style={[styles.choice,selected&&styles.selected]}><Text style={styles.choiceTitle}>{title}</Text><Text style={styles.choiceBody}>{body}</Text></Pressable>}
