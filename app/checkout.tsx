@@ -18,8 +18,7 @@ export default function CheckoutScreen() {
   const items = getCartItems();
   const total = getCartTotal();
   const purchaseContext = getPurchaseContext();
-  const businessBulkFee = purchaseContext.customerType==='BUSINESS' && purchaseContext.orderType==='ONE_TIME_BULK' ? bulkFee : 0;
-  const dairywalaIds = [...new Set(items.map((item) => item.dairywalaId).filter(Boolean))];
+    const dairywalaIds = [...new Set(items.map((item) => item.dairywalaId).filter(Boolean))];
   const dairywalaId = dairywalaIds[0] ?? '';
   const pendingPayment = useRef<PendingPayment | null>(null);
 
@@ -36,6 +35,7 @@ export default function CheckoutScreen() {
   const [error, setError] = useState('');
   const [plusActive, setPlusActive] = useState(false);
   const [bulkFee, setBulkFee] = useState(99);
+  const businessBulkFee = purchaseContext.customerType==='BUSINESS' && purchaseContext.orderType==='ONE_TIME_BULK' ? bulkFee : 0;
 
   useEffect(() => {
     CFPaymentGatewayService.setCallback({
