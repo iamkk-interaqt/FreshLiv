@@ -9,7 +9,7 @@ export default function OrderConfirmedScreen() {
     <Text style={styles.eyebrow}>PAYMENT CONFIRMED</Text>
     <Text style={styles.title}>Order placed successfully</Text>
     <Text style={styles.body}>Order reference: {String(id)}</Text>
-    <Text style={styles.note}>Your Dairywala has been notified. You can follow the order status from tracking.</Text>
+    <Text style={styles.note}>Your local seller has been notified. You can follow the order status from tracking.</Text>
     <Pressable style={styles.button} onPress={() => router.replace({ pathname: '/order-tracking', params: { id: String(id) } })}><Text style={styles.buttonText}>Track order</Text></Pressable>
     <Pressable style={styles.secondaryButton} onPress={() => router.replace('/customer')}><Text style={styles.secondaryText}>Continue shopping</Text></Pressable>
   </View>;
