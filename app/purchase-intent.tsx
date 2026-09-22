@@ -40,18 +40,8 @@ export default function PurchaseIntentScreen(){
    }
    if(!requirement) return;
    if(category==='MILK' && !source) return;
-   if(customerType==='HOME'){
-     setPurchaseContext({customerType:'HOME',orderType:'STANDARD',category,requirement});
-     router.push({pathname:'/discovery',params:{locality,postalCode,product,productCategory:category,source,customerType:'HOME',requirement}});
-     return;
-   }
-   if(!orderType) return;
-   if(orderType==='RECURRING_BULK'){
-     router.push({pathname:'/gwalawala-plus',params:{locality,postalCode,product,source,category,requirement}});
-     return;
-   }
-   setPurchaseContext({customerType:'BUSINESS',orderType,category,requirement});
-   router.push({pathname:'/discovery',params:{locality,postalCode,product,productCategory:category,source,customerType:'BUSINESS',requirement,orderType}});
+   setPurchaseContext({customerType:'HOME',orderType:'STANDARD',category,requirement});
+   router.push({pathname:'/discovery',params:{locality,postalCode,product,productCategory:category,source,customerType:'HOME',requirement}});
  }
  return <ScrollView contentContainerStyle={styles.container}>
    <Pressable onPress={()=>router.back()}><Text style={styles.back}>← Back</Text></Pressable>
