@@ -1,16 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { CFPaymentGatewayService } from 'react-native-cashfree-pg-sdk';
-import { CFEnvironment, CFSession } from 'cashfree-pg-api-contract';
-import { getCartItems, getCartTotal, clearCart, getPurchaseContext } from '../src/services/cart';
-import { saveCustomerAddress, createPendingOrder } from '../src/services/checkout';
-import { createCashfreePaymentOrder, verifyCashfreePayment } from '../src/services/cashfree';
-import { supabase } from '../src/lib/supabase';
-import { useAuth } from '../src/auth/AuthProvider';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 type DeliverySlot = { id: string; code: string };
-type PendingPayment = { orderId: string; cashfreeOrderId: string };
+const TEST_UPI_ID = '7978388706@upi';
 
 export default function CheckoutScreen() {
   const router = useRouter();
@@ -37,33 +31,6 @@ export default function CheckoutScreen() {
   const [bulkFee, setBulkFee] = useState(99);
   const businessBulkFee = purchaseContext.customerType==='BUSINESS' && purchaseContext.orderType==='ONE_TIME_BULK' ? bulkFee : 0;
 
-  useEffect(() => {
-    CFPaymentGatewayService.setCallback({
-      onVerify: async (orderID: string) => {
-        const payment = pendingPayment.current;
-        if (!payment || payment.cashfreeOrderId !== orderID) return;
-        try {
-          setLoading(true);
-          await verifyCashfreePayment(payment.orderId, payment.cashfreeOrderId);
-          clearCart();
-          pendingPayment.current = null;
-          router.replace({ pathname: '/order-confirmed', params: { id: payment.orderId } });
-        } catch (e) {
-          setError(e instanceof Error ? e.message : 'Payment verification failed. Your order remains pending until payment is verified.');
-        } finally {
-          setLoading(false);
-        }
-      },
-      onError: (_paymentError: unknown, orderID: string) => {
-        if (pendingPayment.current?.cashfreeOrderId === orderID) {
-          setError(`Payment was not completed for order ${pendingPayment.current.orderId.slice(0, 8)}. You can try again.`);
-        }
-        pendingPayment.current = null;
-        setLoading(false);
-      },
-    });
-    return () => CFPaymentGatewayService.removeCallback();
-  }, [router]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -122,13 +89,10 @@ export default function CheckoutScreen() {
         savedAddressId = await saveCustomerAddress({ label: 'Home', addressLine1, locality, city, state, postalCode });
       }
       const orderId = await createPendingOrder(dairywalaId, savedAddressId, selectedSlotId, items);
-      const payment = await createCashfreePaymentOrder(orderId);
-      pendingPayment.current = { orderId, cashfreeOrderId: payment.cashfreeOrderId };
-      const environment = payment.environment === 'PRODUCTION' ? CFEnvironment.PRODUCTION : CFEnvironment.SANDBOX;
-      CFPaymentGatewayService.doWebPayment(new CFSession(payment.paymentSessionId, payment.cashfreeOrderId, environment));
+      router.push({ pathname: '/test-upi-payment', params: { orderId, amount: String(total + businessBulkFee), upiId: TEST_UPI_ID } });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Unable to start payment.');
-      pendingPayment.current = null;
+      setError(e instanceof Error ? e.message : 'Unable to create order.');
+    } finally {
       setLoading(false);
     }
   }
