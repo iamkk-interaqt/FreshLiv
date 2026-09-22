@@ -1,7 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useAuth } from '../src/auth/AuthProvider';
+import { getCartItems, getCartTotal, getPurchaseContext, type CartItem } from '../src/services/cart';
+import { createPendingOrder, saveCustomerAddress } from '../src/services/checkout';
+import { supabase } from '../src/lib/supabase';
 
 type DeliverySlot = { id: string; code: string };
 const TEST_UPI_ID = '7978388706@upi';
@@ -14,7 +17,6 @@ export default function CheckoutScreen() {
   const purchaseContext = getPurchaseContext();
     const dairywalaIds = [...new Set(items.map((item) => item.dairywalaId).filter(Boolean))];
   const dairywalaId = dairywalaIds[0] ?? '';
-  const pendingPayment = useRef<PendingPayment | null>(null);
 
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [addressId, setAddressId] = useState('');
