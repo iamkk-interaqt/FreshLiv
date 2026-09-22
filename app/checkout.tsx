@@ -149,11 +149,11 @@ export default function CheckoutScreen() {
     <View style={styles.summary}>
       <View>
         <Text style={styles.summaryTitle}>Order summary</Text>
-        {purchaseContext.customerType==='BUSINESS' ? <Text style={styles.fee}>{purchaseContext.orderType==='RECURRING_BULK' && plusActive ? '⭐ FreshLiv Plus · Service fee ₹0' : `Bulk convenience fee · ₹${purchaseContext.orderType==='ONE_TIME_BULK' ? 99 : bulkFee}`}</Text> : null}
+        {purchaseContext.customerType==='BUSINESS' ? <Text style={styles.fee}>{purchaseContext.orderType==='RECURRING_BULK' && plusActive ? '⭐ FreshLiv Plus · Service fee ₹0' : `Bulk convenience fee · ₹${purchaseContext.orderType==='ONE_TIME_BULK' ? bulkFee : bulkFee}`}</Text> : null}
         <Text style={styles.totalLabel}>Products</Text>
         <Text style={styles.total}>₹{total.toFixed(2)}</Text>
       </View>
-      <View><Text style={styles.totalLabel}>Service fee</Text><Text style={styles.total}>{purchaseContext.customerType==='BUSINESS' && purchaseContext.orderType==='RECURRING_BULK' && plusActive ? '₹0' : purchaseContext.customerType==='BUSINESS' ? `₹${purchaseContext.orderType==='ONE_TIME_BULK' ? 99 : bulkFee}` : '₹0'}</Text></View>
+      <View><Text style={styles.totalLabel}>Service fee</Text><Text style={styles.total}>{purchaseContext.customerType==='BUSINESS' && purchaseContext.orderType==='RECURRING_BULK' && plusActive ? '₹0' : purchaseContext.customerType==='BUSINESS' ? `₹${purchaseContext.orderType==='ONE_TIME_BULK' ? bulkFee : bulkFee}` : '₹0'}</Text></View>
     </View>
     <Pressable style={styles.button} disabled={loading || !selectedSlotId || dairywalaIds.length !== 1} onPress={placeOrder}>{loading ? <ActivityIndicator color="#fff"/> : <Text style={styles.buttonText}>Continue to payment</Text>}</Pressable>
   </ScrollView>;

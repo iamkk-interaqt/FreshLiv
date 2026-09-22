@@ -51,6 +51,7 @@ function matchesProduct(
   requestedSource?: string,
   requestedVariant?: string,
   requestedBreed?: string,
+  bulkOnly = false,
 ) {
   const category = upper(product.product_category);
   const requested = upper(requestedCategory);
@@ -58,6 +59,7 @@ function matchesProduct(
   const source = upper(requestedSource);
   const variant = upper(requestedVariant);
   const breed = normalize(requestedBreed);
+  if (bulkOnly && !product.bulk_order_enabled) return false;
 
   // Backward compatibility while legacy products are being classified in Admin.
   const legacyName = normalize(product.name);
@@ -84,6 +86,7 @@ export async function findActiveDairywalas(
   requestedSource?: string,
   requestedVariant?: string,
   requestedBreed?: string,
+  bulkOnly = false,
 ): Promise<DairywalaSummary[]> {
   const postalCode = location.postalCode?.trim();
   const locality = location.locality?.trim();
@@ -133,7 +136,7 @@ export async function findActiveDairywalas(
     activeIds.filter((id) =>
       productRows.some((product) =>
         product.dairywala_id === id &&
-        matchesProduct(product, requestedCategory, requestedUsage, requestedSource, requestedVariant, requestedBreed)
+        matchesProduct(product, requestedCategory, requestedUsage, requestedSource, requestedVariant, requestedBreed, bulkOnly)
       )
     )
   );
