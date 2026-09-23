@@ -7,7 +7,6 @@ import { createPendingOrder, saveCustomerAddress } from '../src/services/checkou
 import { supabase } from '../src/lib/supabase';
 
 type DeliverySlot = { id: string; code: string };
-const TEST_UPI_ID = '7978388706@upi';
 
 export default function CheckoutScreen() {
   const router = useRouter();
@@ -91,7 +90,7 @@ export default function CheckoutScreen() {
         savedAddressId = await saveCustomerAddress({ label: 'Home', addressLine1, locality, city, state, postalCode });
       }
       const orderId = await createPendingOrder(dairywalaId, savedAddressId, selectedSlotId, items);
-      router.push({ pathname: '/test-upi-payment', params: { orderId, amount: String(total + businessBulkFee), upiId: TEST_UPI_ID } });
+      router.push({ pathname: '/cashfree-payment', params: { orderId } });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unable to create order.');
     } finally {
