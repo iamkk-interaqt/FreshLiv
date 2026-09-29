@@ -21,10 +21,10 @@
       ]
     ],
     "android": {
-      "package": "com.gwalawala.app"
+      "package": "com.freshliv.app"
     },
     "ios": {
-      "bundleIdentifier": "com.gwalawala.app",
+      "bundleIdentifier": "com.freshliv.app",
       "infoPlist": {
         "LSApplicationQueriesSchemes": [
           "phonepe",
