@@ -8,10 +8,40 @@
     "scheme": "gwalawala",
     "plugins": [
       "expo-router",
-      ["expo-notifications", {"defaultChannel": "orders"}]
+      "expo-location",
+      [
+        "react-native-maps",
+        {
+          "androidGoogleMapsApiKey": "process.env.GOOGLE_MAPS_MOBILE_API_KEY",
+          "iosGoogleMapsApiKey": "process.env.GOOGLE_MAPS_MOBILE_API_KEY"
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "defaultChannel": "orders"
+        }
+      ]
     ],
-    "android": {"package": "com.gwalawala.app"},
-    "ios": {"bundleIdentifier": "com.gwalawala.app", "infoPlist": {"LSApplicationQueriesSchemes": ["phonepe","tez","paytmmp","bhim","amazonpay","credpay","upi"]}},
-    "experiments": {"typedRoutes": true}
+    "android": {
+      "package": "com.gwalawala.app"
+    },
+    "ios": {
+      "bundleIdentifier": "com.gwalawala.app",
+      "infoPlist": {
+        "LSApplicationQueriesSchemes": [
+          "phonepe",
+          "tez",
+          "paytmmp",
+          "bhim",
+          "amazonpay",
+          "credpay",
+          "upi"
+        ]
+      }
+    },
+    "experiments": {
+      "typedRoutes": true
+    }
   }
 }
