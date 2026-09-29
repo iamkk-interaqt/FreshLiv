@@ -54,10 +54,17 @@ export default function LocationScreen() {
 
   const continueToMarketplace = () => {
     if (!selected) return;
-    router.push({ pathname: "/customer-home", params: {
-      locality: address, postalCode: "", latitude: String(selected.latitude),
-      longitude: String(selected.longitude), vertical: String(vertical)
-    }});
+    const params = {
+      locality: address,
+      postalCode: "",
+      latitude: String(selected.latitude),
+      longitude: String(selected.longitude),
+      vertical: String(vertical),
+    };
+    router.push({
+      pathname: String(vertical).toUpperCase() === "MEAT" ? "/meat-category" : "/customer-home",
+      params,
+    });
   };
 
   return (
