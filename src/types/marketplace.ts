@@ -44,6 +44,8 @@ export type DairywalaSummary = {
   profileAvatar?: string;
   ratingAverage?: number;
   ratingCount?: number;
+  roadDistanceMeters?: number;
+  roadDurationSeconds?: number;
   morningSlotAvailable: boolean;
   eveningSlotAvailable: boolean;
 };
