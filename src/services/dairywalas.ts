@@ -93,28 +93,32 @@ export async function findActiveDairywalas(
 ): Promise<DairywalaSummary[]> {
   const postalCode = location.postalCode?.trim();
   const locality = location.locality?.trim();
-  if (!postalCode && !locality) return [];
+  const hasCoordinates = Number.isFinite(location.latitude) && Number.isFinite(location.longitude);
+  if (!postalCode && !locality && !hasCoordinates) return [];
 
-  let areas: ServiceAreaRow[] = [];
-  if (postalCode) {
-    const { data, error } = await supabase.from('dairywala_service_areas').select('dairywala_id').eq('postal_code', postalCode);
-    if (error) throw error;
-    areas = data ?? [];
-  }
-  if (!areas.length && locality) {
-    const { data, error } = await supabase.from('dairywala_service_areas').select('dairywala_id').ilike('locality', locality);
-    if (error) throw error;
-    areas = data ?? [];
-  }
-
-  const ids = [...new Set(areas.map((row) => row.dairywala_id))];
-  if (!ids.length) return [];
-
-  const { data: profiles, error: profileError } = await supabase
+  let profilesQuery = supabase
     .from('dairywala_profiles')
     .select('id,business_name,phone,locality,families_served,years_in_business,profile_avatar,latitude,longitude')
-    .in('id', ids)
     .eq('status', 'ACTIVE');
+
+  if (!hasCoordinates) {
+    let areas: ServiceAreaRow[] = [];
+    if (postalCode) {
+      const { data, error } = await supabase.from('dairywala_service_areas').select('dairywala_id').eq('postal_code', postalCode);
+      if (error) throw error;
+      areas = data ?? [];
+    }
+    if (!areas.length && locality) {
+      const { data, error } = await supabase.from('dairywala_service_areas').select('dairywala_id').ilike('locality', locality);
+      if (error) throw error;
+      areas = data ?? [];
+    }
+    const ids = [...new Set(areas.map((row) => row.dairywala_id))];
+    if (!ids.length) return [];
+    profilesQuery = profilesQuery.in('id', ids);
+  }
+
+  const { data: profiles, error: profileError } = await profilesQuery;
   if (profileError) throw profileError;
   if (!profiles?.length) return [];
 
