@@ -4,13 +4,18 @@ module.exports = {
   ...base,
   expo: {
     ...base.expo,
+    android: {
+      ...base.expo.android,
+      config: {
+        ...base.expo.android?.config,
+        googleMaps: {
+          apiKey: process.env.GOOGLE_MAPS_ANDROID_API_KEY || process.env.GOOGLE_MAPS_MOBILE_API_KEY
+        }
+      }
+    },
     plugins: [
       "expo-router",
       "expo-location",
-      ["react-native-maps", {
-        androidGoogleMapsApiKey: process.env.GOOGLE_MAPS_MOBILE_API_KEY,
-        iosGoogleMapsApiKey: process.env.GOOGLE_MAPS_MOBILE_API_KEY
-      }],
       ["expo-notifications", { defaultChannel: "orders" }]
     ]
   }
