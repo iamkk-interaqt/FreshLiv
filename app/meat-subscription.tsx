@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 
 export default function MeatSubscriptionScreen(){
  const router=useRouter();
- const p=useLocalSearchParams<{category?:string;variant?:string;locality?:string;postalCode?:string}>();
+ const p=useLocalSearchParams<{category?:string;variant?:string;locality?:string;postalCode?:string;latitude?:string;longitude?:string}>();
  const[checking,setChecking]=useState(true); const[plusActive,setPlusActive]=useState(false);
  useEffect(()=>{let mounted=true;(async()=>{try{
   const {data:{user}}=await supabase.auth.getUser();
