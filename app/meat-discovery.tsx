@@ -7,7 +7,7 @@ import { mapsApi } from '../src/services/googleMaps';
 type Seller={id:string;businessName:string;locality:string|null;phone:string|null;avatar:string|null;roadDistanceMeters?:number;roadDurationSeconds?:number;morning:boolean;evening:boolean;products:{id:string;name:string;variant:string|null;quantityValue:number|null;quantityUnit:string|null;price:number;bulk:boolean}[]};
 
 export default function MeatDiscoveryScreen(){
- const router=useRouter(); const p=useLocalSearchParams<{locality?:string;postalCode?:string;productCategory?:string;variant?:string;usage?:string;quantityValue?:string;quantityUnit?:string;bulkOnly?:string;subscriptionPlan?:string}>();
+ const router=useRouter(); const p=useLocalSearchParams<{locality?:string;postalCode?:string;latitude?:string;longitude?:string;productCategory?:string;variant?:string;usage?:string;quantityValue?:string;quantityUnit?:string;bulkOnly?:string;subscriptionPlan?:string}>();
  const[rows,setRows]=useState<Seller[]>([]);const[loading,setLoading]=useState(true);const[error,setError]=useState('');
  useEffect(()=>{let mounted=true;(async()=>{try{
   const locality=String(p.locality||'').trim(), postal=String(p.postalCode||'').trim(), category=String(p.productCategory||'').toUpperCase(), variant=String(p.variant||'').toUpperCase(), usage=String(p.usage||'').toUpperCase();
@@ -28,7 +28,7 @@ export default function MeatDiscoveryScreen(){
   const{data:products,error:prode}=await supabase.from('products').select('id,dairywala_id,name,product_category,product_variant,usage_types,quantity_value,quantity_unit,price,bulk_order_enabled,status').in('dairywala_id',activeIds).eq('status','ACTIVE').eq('product_category',category).eq('product_variant',variant);if(prode)throw prode;
   const filtered=(products||[]).filter(x=>{const usages=(x.usage_types||[]).map((v:string)=>v.toUpperCase());if(usage&&!usages.includes(usage))return false;if(p.quantityValue&&Number(x.quantity_value)!==Number(p.quantityValue))return false;if(p.quantityUnit&&String(x.quantity_unit||'').toUpperCase()!==String(p.quantityUnit).toUpperCase())return false;if(p.bulkOnly==='true'&&!x.bulk_order_enabled)return false;return true;});
   const candidates=(profiles||[]).map(pr=>({pr,products:filtered.filter(x=>x.dairywala_id===pr.id)})).filter(x=>x.products.length);
-  const out=(await Promise.all(candidates.slice(0,20).map(async ({pr,products})=>{
+  const out=(await Promise.all(candidates.map(async ({pr,products})=>{
     let roadDistanceMeters:number|undefined,roadDurationSeconds:number|undefined;
     if(hasCoordinates){
       if(!Number.isFinite(Number(pr.latitude))||!Number.isFinite(Number(pr.longitude)))return null;
@@ -38,7 +38,7 @@ export default function MeatDiscoveryScreen(){
   }))).filter((x):x is Seller=>x!==null);
   out.sort((a,b)=>(a.roadDistanceMeters??Number.MAX_SAFE_INTEGER)-(b.roadDistanceMeters??Number.MAX_SAFE_INTEGER));
   if(mounted)setRows(out);
- }catch(e){if(mounted)setError(e instanceof Error?e.message:'Unable to load meat sellers.')}finally{if(mounted)setLoading(false)}})();return()=>{mounted=false}},[p.locality,p.postalCode,p.productCategory,p.variant,p.usage,p.quantityValue,p.quantityUnit,p.bulkOnly]);
+ }catch(e){if(mounted)setError(e instanceof Error?e.message:'Unable to load meat sellers.')}finally{if(mounted)setLoading(false)}})();return()=>{mounted=false}},[p.locality,p.postalCode,p.productCategory,p.variant,p.usage,p.quantityValue,p.quantityUnit,p.bulkOnly,p.latitude,p.longitude]);
  const descriptor=p.usage==='SHOP'?(p.bulkOnly==='true'?(p.subscriptionPlan?'FreshLiv Plus · '+p.subscriptionPlan:'Business bulk order'):'Business order'):'Home · '+String(p.quantityValue||'')+' '+String(p.quantityUnit||'');
  return <ScrollView contentContainerStyle={styles.container}><Text style={styles.eyebrow}>AVAILABLE NEAR YOU</Text><Text style={styles.title}>{p.productCategory} · {p.variant?.replaceAll('_',' ')}</Text><Text style={styles.body}>{descriptor}</Text>
  {loading?<View style={styles.center}><ActivityIndicator/><Text style={styles.muted}>Checking local sellers…</Text></View>:error?<View style={styles.empty}><Text style={styles.emptyTitle}>Could not load sellers</Text><Text style={styles.body}>{error}</Text></View>:!rows.length?<View style={styles.empty}><Text style={styles.emptyTitle}>No matching sellers yet</Text><Text style={styles.body}>There is no active seller in this area with this exact product configuration yet.</Text></View>:rows.map(s=><View key={s.id} style={styles.card}><View style={styles.head}><Text style={styles.avatar}>{s.avatar||'👨'}</Text><View style={styles.grow}><Text style={styles.seller}>{s.businessName}</Text><Text style={styles.meta}>{s.locality||'Local seller'}{s.roadDistanceMeters!=null?' · '+(s.roadDistanceMeters/1000).toFixed(1)+' km away':''}</Text></View></View>{s.products.map(pr=><Pressable key={pr.id} style={styles.product} onPress={()=>router.push({pathname:'/product',params:{id:pr.id}})}><View style={styles.grow}><Text style={styles.productName}>{pr.name}</Text><Text style={styles.meta}>{pr.quantityValue} {pr.quantityUnit} · ₹{pr.price.toFixed(2)}</Text></View><Text style={styles.add}>View ›</Text></Pressable>)}<Text style={styles.slots}>{s.morning?'Morning ':''}{s.evening?'Evening':''}</Text></View>)}</ScrollView>;
