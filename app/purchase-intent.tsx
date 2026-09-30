@@ -26,7 +26,7 @@ function keyFor(value:string) {
 
 export default function PurchaseIntentScreen(){
  const router=useRouter();
- const {product='',productCategory='',locality='',postalCode='',latitude='',longitude='',sourceParam=''}=useLocalSearchParams<{product?:string;locality?:string;postalCode?:string;sourceParam?:string}>();
+ const {product='',productCategory='',locality='',postalCode='',latitude='',longitude='',sourceParam=''}=useLocalSearchParams<{product?:string;locality?:string;postalCode?:string;sourceParam?:string;latitude?:string;longitude?:string}>();
  const category=String(productCategory||keyFor(String(product))).toUpperCase(); const [customerType,setCustomerType]=useState<'HOME'|'BUSINESS'|null>(null);
  const [requirement,setRequirement]=useState(''); const [source,setSource]=useState(''); const [orderType,setOrderType]=useState<'STANDARD'|'ONE_TIME_BULK'|'RECURRING_BULK'|null>(null);
  const options=customerType==='HOME'?HOME_OPTIONS[category]??['Everyday Home Requirement']:[];
@@ -43,7 +43,7 @@ export default function PurchaseIntentScreen(){
       if(active) router.push({pathname:'/discovery',params:{locality,postalCode,latitude,longitude,product,productCategory:category,source,customerType:'BUSINESS',usage:'SHOP',requirement:'Recurring Bulk Supply',orderType:'RECURRING_BULK',bulkOnly:'true'}});
       else router.push({pathname:'/gwalawala-plus',params:{locality,postalCode,latitude,longitude,product,source,category,requirement:'Recurring Bulk Supply'}});
     }
-     else router.push({pathname:'/discovery',params:{locality,postalCode,product,productCategory:category,source,customerType:'BUSINESS',requirement:'One-Time Bulk Order',orderType,bulkOnly:'true'}});
+     else router.push({pathname:'/discovery',params:{locality,postalCode,latitude,longitude,product,productCategory:category,source,customerType:'BUSINESS',requirement:'One-Time Bulk Order',orderType,bulkOnly:'true'}});
      return;
    }
    if(!requirement) return;
