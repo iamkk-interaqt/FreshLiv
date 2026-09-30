@@ -168,7 +168,7 @@ export async function findActiveDairywalas(
     });
   }
   const origin = { latitude: Number(location.latitude), longitude: Number(location.longitude) };
-  const routed = await Promise.all(candidates.slice(0, 20).map(async (profile) => {
+  const routed = await Promise.all(candidates.map(async (profile) => {
     if (!Number.isFinite(profile.latitude) || !Number.isFinite(profile.longitude)) return null;
     try {
       const route = await mapsApi.route(origin, { latitude: Number(profile.latitude), longitude: Number(profile.longitude) });
