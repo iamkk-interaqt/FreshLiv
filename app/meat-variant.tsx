@@ -32,7 +32,7 @@ const OPTIONS: Record<string, { key: string; label: string; emoji: string }[]> =
 
 export default function MeatVariantScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ locality?: string; postalCode?: string; category?: string }>();
+  const params = useLocalSearchParams<{ locality?: string; postalCode?: string; latitude?: string; longitude?: string; category?: string }>();
   const category = String(params.category || 'CHICKEN').toUpperCase();
   const options = OPTIONS[category] || OPTIONS.CHICKEN;
 
