@@ -17,7 +17,9 @@ export default function DiscoveryScreen() {
     breed = '',
     orderType = '',
     bulkOnly = '',
-  } = useLocalSearchParams<{ locality?: string; postalCode?: string; product?: string; productCategory?: string; source?: string; usage?: string; variant?: string; breed?: string; orderType?: string; bulkOnly?: string }>();
+    latitude = '',
+    longitude = '',
+  } = useLocalSearchParams<{ locality?: string; postalCode?: string; product?: string; productCategory?: string; source?: string; usage?: string; variant?: string; breed?: string; orderType?: string; bulkOnly?: string; latitude?: string; longitude?: string }>();
   const [loading, setLoading] = useState(true);
   const [dairywalas, setDairywalas] = useState<DairywalaSummary[]>([]);
   const [error, setError] = useState('');
@@ -27,7 +29,7 @@ export default function DiscoveryScreen() {
     setLoading(true);
     setError('');
     findActiveDairywalas(
-      { locality: String(locality), postalCode: String(postalCode) },
+      { locality: String(locality), postalCode: String(postalCode), latitude: Number(latitude), longitude: Number(longitude) },
       String(productCategory || product),
       String(usage),
       String(source),
@@ -45,7 +47,7 @@ export default function DiscoveryScreen() {
         if (mounted) setLoading(false);
       });
     return () => { mounted = false; };
-  }, [locality, postalCode, product, productCategory, source, usage, variant, breed, orderType, bulkOnly]);
+  }, [locality, postalCode, latitude, longitude, product, productCategory, source, usage, variant, breed, orderType, bulkOnly]);
 
   const discoveryLabel = [source, product].filter(Boolean).join(' ');
 
@@ -65,7 +67,7 @@ export default function DiscoveryScreen() {
           <Text style={styles.emptyBody}>{error}</Text>
           <Pressable
             style={styles.button}
-            onPress={() => router.replace({ pathname: '/discovery', params: { locality, postalCode, product, productCategory, source, usage, variant, breed, orderType, bulkOnly } })}
+            onPress={() => router.replace({ pathname: '/discovery', params: { locality, postalCode, latitude, longitude, product, productCategory, source, usage, variant, breed, orderType, bulkOnly } })}
           >
             <Text style={styles.buttonText}>Try again</Text>
           </Pressable>
