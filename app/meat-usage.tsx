@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 export default function MeatUsageScreen() {
  const router=useRouter();
- const params=useLocalSearchParams<{locality?:string;postalCode?:string;category?:string;variant?:string}>();
+ const params=useLocalSearchParams<{locality?:string;postalCode?:string;latitude?:string;longitude?:string;category?:string;variant?:string}>();
  const category=String(params.category||'CHICKEN').toUpperCase();
  const choose=(mode:'HOME'|'BUSINESS')=>{
   if(mode==='HOME') router.push({pathname:'/meat-quantity',params:{...params,usage:'HOME'}});

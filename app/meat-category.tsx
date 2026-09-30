@@ -10,7 +10,7 @@ const CATEGORIES = [
 
 export default function MeatCategoryScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ locality?: string; postalCode?: string }>();
+  const params = useLocalSearchParams<{ locality?: string; postalCode?: string; latitude?: string; longitude?: string }>();
 
   return (
     <View style={styles.container}>

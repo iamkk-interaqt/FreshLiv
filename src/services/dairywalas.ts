@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import type { CustomerLocation, DairywalaSummary, DairywalaProductMatch } from '../types/marketplace';
+import { mapsApi } from './googleMaps';
 
 type ServiceAreaRow = { dairywala_id: string };
 type ProfileRow = {
@@ -10,6 +11,8 @@ type ProfileRow = {
   families_served: number | null;
   years_in_business: number | null;
   profile_avatar: string | null;
+  latitude: number | null;
+  longitude: number | null;
 };
 type DeliverySlotRow = { dairywala_id: string; slot_code: string; active: boolean };
 type ProductRow = {
@@ -90,28 +93,32 @@ export async function findActiveDairywalas(
 ): Promise<DairywalaSummary[]> {
   const postalCode = location.postalCode?.trim();
   const locality = location.locality?.trim();
-  if (!postalCode && !locality) return [];
+  const hasCoordinates = Number.isFinite(location.latitude) && Number.isFinite(location.longitude);
+  if (!postalCode && !locality && !hasCoordinates) return [];
 
-  let areas: ServiceAreaRow[] = [];
-  if (postalCode) {
-    const { data, error } = await supabase.from('dairywala_service_areas').select('dairywala_id').eq('postal_code', postalCode);
-    if (error) throw error;
-    areas = data ?? [];
-  }
-  if (!areas.length && locality) {
-    const { data, error } = await supabase.from('dairywala_service_areas').select('dairywala_id').ilike('locality', locality);
-    if (error) throw error;
-    areas = data ?? [];
-  }
-
-  const ids = [...new Set(areas.map((row) => row.dairywala_id))];
-  if (!ids.length) return [];
-
-  const { data: profiles, error: profileError } = await supabase
+  let profilesQuery = supabase
     .from('dairywala_profiles')
-    .select('id,business_name,phone,locality,families_served,years_in_business,profile_avatar')
-    .in('id', ids)
+    .select('id,business_name,phone,locality,families_served,years_in_business,profile_avatar,latitude,longitude')
     .eq('status', 'ACTIVE');
+
+  if (!hasCoordinates) {
+    let areas: ServiceAreaRow[] = [];
+    if (postalCode) {
+      const { data, error } = await supabase.from('dairywala_service_areas').select('dairywala_id').eq('postal_code', postalCode);
+      if (error) throw error;
+      areas = data ?? [];
+    }
+    if (!areas.length && locality) {
+      const { data, error } = await supabase.from('dairywala_service_areas').select('dairywala_id').ilike('locality', locality);
+      if (error) throw error;
+      areas = data ?? [];
+    }
+    const ids = [...new Set(areas.map((row) => row.dairywala_id))];
+    if (!ids.length) return [];
+    profilesQuery = profilesQuery.in('id', ids);
+  }
+
+  const { data: profiles, error: profileError } = await profilesQuery;
   if (profileError) throw profileError;
   if (!profiles?.length) return [];
 
@@ -141,9 +148,10 @@ export async function findActiveDairywalas(
     )
   );
 
-  return (profiles as ProfileRow[])
-    .filter((profile) => productFilteredIds.has(profile.id))
-    .map((profile) => {
+  const candidates = (profiles as ProfileRow[]).filter((profile) => productFilteredIds.has(profile.id));
+  const hasCoordinates = Number.isFinite(location.latitude) && Number.isFinite(location.longitude);
+  if (!hasCoordinates) {
+    return candidates.map((profile) => {
       const dairywalaSlots = (slots ?? []).filter((slot) => slot.dairywala_id === profile.id);
       const normalizedSlots = dairywalaSlots.map((slot) => upper(slot.slot_code));
       return {
@@ -158,6 +166,35 @@ export async function findActiveDairywalas(
         eveningSlotAvailable: normalizedSlots.includes('EVENING'),
       };
     });
+  }
+  const origin = { latitude: Number(location.latitude), longitude: Number(location.longitude) };
+  const routed = await Promise.all(candidates.map(async (profile) => {
+    if (!Number.isFinite(profile.latitude) || !Number.isFinite(profile.longitude)) return null;
+    try {
+      const route = await mapsApi.route(origin, { latitude: Number(profile.latitude), longitude: Number(profile.longitude) });
+      if (route.distanceMeters > 3000) return null;
+      const dairywalaSlots = (slots ?? []).filter((slot) => slot.dairywala_id === profile.id);
+      const normalizedSlots = dairywalaSlots.map((slot) => upper(slot.slot_code));
+      return {
+        id: profile.id,
+        businessName: profile.business_name,
+        locality: profile.locality ?? '',
+        phone: profile.phone,
+        familiesServed: profile.families_served,
+        yearsInBusiness: profile.years_in_business,
+        profileAvatar: profile.profile_avatar || '👨',
+        roadDistanceMeters: route.distanceMeters,
+        roadDurationSeconds: route.durationSeconds,
+        morningSlotAvailable: normalizedSlots.includes('MORNING'),
+        eveningSlotAvailable: normalizedSlots.includes('EVENING'),
+      };
+    } catch {
+      return null;
+    }
+  }));
+  return routed
+    .filter((item): item is DairywalaSummary => item !== null)
+    .sort((a, b) => (a.roadDistanceMeters ?? Number.MAX_SAFE_INTEGER) - (b.roadDistanceMeters ?? Number.MAX_SAFE_INTEGER));
 }
 
 export async function findMatchingProducts(
